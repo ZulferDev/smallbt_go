@@ -2,6 +2,7 @@ package backtest
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -70,6 +71,32 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	}
 	riskManager := risk.NewManager(riskConfig)
 
+	// Create risk calculators from strategy config
+	var positionSizer *risk.PositionSizer
+	var stopLossCalc *risk.StopLossCalculator
+	var takeProfitCalc *risk.TakeProfitCalculator
+	var trailingStopCalc *risk.TrailingStopCalculator
+
+	if strategyAST.Risk.PositionSize.Type != "" {
+		// Position sizer
+		positionSizer = risk.NewPositionSizer(strategyAST.Risk.PositionSize)
+	}
+
+	// Stop loss (pointer check)
+	if strategyAST.Risk.StopLoss != nil {
+		stopLossCalc = risk.NewStopLossCalculator(strategyAST.Risk.StopLoss)
+	}
+
+	// Take profit (pointer check)
+	if strategyAST.Risk.TakeProfit != nil {
+		takeProfitCalc = risk.NewTakeProfitCalculator(strategyAST.Risk.TakeProfit)
+	}
+
+	// Trailing stop
+	if strategyAST.Risk.TrailingStop != nil {
+		trailingStopCalc = risk.NewTrailingStopCalculator(strategyAST.Risk.TrailingStop)
+	}
+
 	// Create execution config
 	execConfig := execution.Config{
 		SlippageType:  "percentage",
@@ -85,9 +112,13 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	brokerInstance := broker.NewBroker(executor)
 
 	// Step 4: Run backtest loop
-	tradeHistory, equityCurve, result := runBacktestLoop(
-		candles, evaluator, portfolio, riskManager, executor, brokerInstance, config,
+	tradeHistory, equityCurve, result, err := runBacktestLoop(
+		candles, evaluator, portfolio, riskManager, executor, brokerInstance, config, strategyAST,
+		positionSizer, stopLossCalc, takeProfitCalc, trailingStopCalc,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("backtest loop: %w", err)
+	}
 
 	// Step 5: Calculate analytics
 	metrics := calculateMetrics(result)
@@ -203,7 +234,12 @@ func runBacktestLoop(
 	executor *execution.SimpleExecutor,
 	brokerInstance *broker.Broker,
 	config BacktestConfig,
-) ([]portfolio.Trade, []EquityPoint, *BacktestResult) {
+	strategyAST *ast.Strategy,
+	positionSizer *risk.PositionSizer,
+	stopLossCalc *risk.StopLossCalculator,
+	takeProfitCalc *risk.TakeProfitCalculator,
+	trailingStopCalc *risk.TrailingStopCalculator,
+) ([]portfolio.Trade, []EquityPoint, *BacktestResult, error) {
 	var trades []portfolio.Trade
 	var equityCurve []EquityPoint
 	state := backtestState{
@@ -245,6 +281,47 @@ func runBacktestLoop(
 					state.positionSide = portfolio.PositionSideLong
 					state.entryPrice = ord.FilledPrice
 					state.entryTime = candle.Timestamp
+
+					// Calculate stop loss and take profit
+					if stopLossCalc != nil {
+						// Get ATR value if needed
+						atrValue := 0.0
+						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
+							indicatorValues := evaluator.GetIndicatorValues()
+							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
+								atrValue = val
+							}
+						}
+						slSide := "long"
+						if state.positionSide == portfolio.PositionSideShort {
+							slSide = "short"
+						}
+						sl, err := stopLossCalc.Calculate(ord.FilledPrice, slSide, atrValue)
+						if err != nil {
+							return nil, nil, nil, fmt.Errorf("calculate stop loss: %w", err)
+						}
+						if sl > 0 {
+							state.stopLoss = &sl
+						}
+					}
+					if takeProfitCalc != nil {
+						// Get stop loss price for risk/reward calculation
+						slPrice := 0.0
+						if state.stopLoss != nil {
+							slPrice = *state.stopLoss
+						}
+						tpSide := "long"
+						if state.positionSide == portfolio.PositionSideShort {
+							tpSide = "short"
+						}
+						tp, err := takeProfitCalc.Calculate(ord.FilledPrice, tpSide, slPrice)
+						if err != nil {
+							return nil, nil, nil, fmt.Errorf("calculate take profit: %w", err)
+						}
+						if tp > 0 {
+							state.takeProfit = &tp
+						}
+					}
 				}
 			} else if ord.Side == order.OrderSideSell {
 				if state.hasPosition && state.positionSide == portfolio.PositionSideLong {
@@ -257,6 +334,8 @@ func runBacktestLoop(
 					trades = append(trades, *trade)
 					state.hasPosition = false
 					state.positionSide = ""
+					state.stopLoss = nil
+					state.takeProfit = nil
 				} else if !state.hasPosition {
 					// Open short position
 					portfolioInstance.OpenPosition(
@@ -269,6 +348,47 @@ func runBacktestLoop(
 					state.positionSide = portfolio.PositionSideShort
 					state.entryPrice = ord.FilledPrice
 					state.entryTime = candle.Timestamp
+
+					// Calculate stop loss and take profit
+					if stopLossCalc != nil {
+						// Get ATR value if needed
+						atrValue := 0.0
+						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
+							indicatorValues := evaluator.GetIndicatorValues()
+							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
+								atrValue = val
+							}
+						}
+						slSide := "long"
+						if state.positionSide == portfolio.PositionSideShort {
+							slSide = "short"
+						}
+						sl, err := stopLossCalc.Calculate(ord.FilledPrice, slSide, atrValue)
+						if err != nil {
+							return nil, nil, nil, fmt.Errorf("calculate stop loss: %w", err)
+						}
+						if sl > 0 {
+							state.stopLoss = &sl
+						}
+					}
+					if takeProfitCalc != nil {
+						// Get stop loss price for risk/reward calculation
+						slPrice := 0.0
+						if state.stopLoss != nil {
+							slPrice = *state.stopLoss
+						}
+						tpSide := "long"
+						if state.positionSide == portfolio.PositionSideShort {
+							tpSide = "short"
+						}
+						tp, err := takeProfitCalc.Calculate(ord.FilledPrice, tpSide, slPrice)
+						if err != nil {
+							return nil, nil, nil, fmt.Errorf("calculate take profit: %w", err)
+						}
+						if tp > 0 {
+							state.takeProfit = &tp
+						}
+					}
 				}
 			}
 		}
@@ -279,17 +399,55 @@ func runBacktestLoop(
 			continue
 		}
 
+		// Update evaluator with current candle for risk calculations
+		evaluator.UpdateCandle(*candle)
+
 		// Process signals and submit orders
 		for _, sig := range signals {
 			switch sig.Type {
 			case signal.SignalTypeLongEntry:
 				if !state.hasPosition {
+					// Calculate position size
+					quantity := 1.0
+					var stopDist float64
+					var sl float64
+					if stopLossCalc != nil {
+						// Get ATR value if needed
+						atrValue := 0.0
+						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
+							indicatorValues := evaluator.GetIndicatorValues()
+							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
+								atrValue = val
+							}
+						}
+						// Estimate stop distance for position sizing
+						var err error
+						sl, err = stopLossCalc.Calculate(candle.Close, "long", atrValue)
+						if err == nil && sl > 0 {
+							stopDist = absPrice(candle.Close - sl)
+						}
+					}
+					if positionSizer != nil {
+						slPrice := 0.0
+						if stopDist > 0 {
+							if candle.Close > sl {
+								slPrice = sl
+							} else {
+								slPrice = candle.Close - stopDist
+							}
+						}
+						qty, err := positionSizer.CalculateQuantity(candle.Close, portfolioInstance.Equity, slPrice)
+						if err == nil && qty > 0 {
+							quantity = qty
+						}
+					}
+
 					// Submit market buy order
 					req := order.OrderRequest{
 						Symbol:   config.Symbol,
 						Side:     order.OrderSideBuy,
 						Type:     order.OrderTypeMarket,
-						Quantity: 1.0, // TODO: calculate from risk config
+						Quantity: quantity,
 					}
 					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
 					if err != nil {
@@ -299,12 +457,41 @@ func runBacktestLoop(
 
 			case signal.SignalTypeShortEntry:
 				if !state.hasPosition {
+					// Calculate position size
+					quantity := 1.0
+					var stopDist float64
+					if stopLossCalc != nil {
+						// Get ATR value if needed
+						atrValue := 0.0
+						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
+							indicatorValues := evaluator.GetIndicatorValues()
+							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
+								atrValue = val
+							}
+						}
+						// Estimate stop distance for position sizing
+						sl, err := stopLossCalc.Calculate(candle.Close, "short", atrValue)
+						if err == nil && sl > 0 {
+							stopDist = absPrice(sl - candle.Close)
+						}
+					}
+					if positionSizer != nil {
+						slPrice := 0.0
+						if stopDist > 0 {
+							slPrice = candle.Close + stopDist
+						}
+						qty, err := positionSizer.CalculateQuantity(candle.Close, portfolioInstance.Equity, slPrice)
+						if err == nil && qty > 0 {
+							quantity = qty
+						}
+					}
+
 					// Submit market sell order
 					req := order.OrderRequest{
 						Symbol:   config.Symbol,
 						Side:     order.OrderSideSell,
 						Type:     order.OrderTypeMarket,
-						Quantity: 1.0, // TODO: calculate from risk config
+						Quantity: quantity,
 					}
 					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
 					if err != nil {
@@ -344,6 +531,57 @@ func runBacktestLoop(
 			}
 		}
 
+		// Check stop loss and take profit if position is open
+		if state.hasPosition {
+			if state.stopLoss != nil {
+				if state.positionSide == portfolio.PositionSideLong && candle.Low <= *state.stopLoss {
+					// Stop loss hit for long position
+					req := order.OrderRequest{
+						Symbol:    config.Symbol,
+						Side:      order.OrderSideSell,
+						Type:      order.OrderTypeStop,
+						Quantity:  1.0,
+						StopPrice: state.stopLoss,
+					}
+					brokerInstance.SubmitOrder(req, candle.Timestamp)
+				} else if state.positionSide == portfolio.PositionSideShort && candle.High >= *state.stopLoss {
+					// Stop loss hit for short position
+					req := order.OrderRequest{
+						Symbol:    config.Symbol,
+						Side:      order.OrderSideBuy,
+						Type:      order.OrderTypeStop,
+						Quantity:  1.0,
+						StopPrice: state.stopLoss,
+					}
+					brokerInstance.SubmitOrder(req, candle.Timestamp)
+				}
+			}
+
+			if state.takeProfit != nil {
+				if state.positionSide == portfolio.PositionSideLong && candle.High >= *state.takeProfit {
+					// Take profit hit for long position
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideSell,
+						Type:     order.OrderTypeLimit,
+						Quantity: 1.0,
+						Price:    state.takeProfit,
+					}
+					brokerInstance.SubmitOrder(req, candle.Timestamp)
+				} else if state.positionSide == portfolio.PositionSideShort && candle.Low <= *state.takeProfit {
+					// Take profit hit for short position
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideBuy,
+						Type:     order.OrderTypeLimit,
+						Quantity: 1.0,
+						Price:    state.takeProfit,
+					}
+					brokerInstance.SubmitOrder(req, candle.Timestamp)
+				}
+			}
+		}
+
 		// Update portfolio with current candle
 		portfolioInstance.UpdateWithCandle(config.Symbol, candle.Close, candle.Timestamp)
 
@@ -357,7 +595,7 @@ func runBacktestLoop(
 		})
 	}
 
-	return trades, equityCurve, nil
+	return trades, equityCurve, nil, nil
 }
 
 func calculateDrawdown(portfolioInstance *portfolio.Portfolio) float64 {
@@ -503,6 +741,11 @@ func calculateSharpe(returns []float64) float64 {
 
 	// Sharpe ratio (assuming 252 trading days, 0 risk-free rate)
 	return mean / stdDev * sqrt(252)
+}
+
+// absPrice returns absolute value for price calculations
+func absPrice(value float64) float64 {
+	return math.Abs(value)
 }
 
 func sqrt(x float64) float64 {
