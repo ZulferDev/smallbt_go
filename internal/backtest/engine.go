@@ -6,12 +6,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/1jehuang/backtest/internal/broker"
 	"github.com/1jehuang/backtest/internal/data/csv"
 	"github.com/1jehuang/backtest/internal/data/parquet"
 	"github.com/1jehuang/backtest/internal/data/resample"
 	"github.com/1jehuang/backtest/internal/execution"
 	"github.com/1jehuang/backtest/internal/indicator"
 	"github.com/1jehuang/backtest/internal/market"
+	"github.com/1jehuang/backtest/internal/order"
 	"github.com/1jehuang/backtest/internal/portfolio"
 	"github.com/1jehuang/backtest/internal/risk"
 	"github.com/1jehuang/backtest/internal/signal"
@@ -79,9 +81,12 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	}
 	executor := execution.NewSimpleExecutor(execConfig)
 
+	// Create broker
+	brokerInstance := broker.NewBroker(executor)
+
 	// Step 4: Run backtest loop
 	tradeHistory, equityCurve, result := runBacktestLoop(
-		candles, evaluator, portfolio, riskManager, executor, config,
+		candles, evaluator, portfolio, riskManager, executor, brokerInstance, config,
 	)
 
 	// Step 5: Calculate analytics
@@ -184,7 +189,6 @@ func filterCandlesByTime(candles []*market.Candle, start, end time.Time) []*mark
 type backtestState struct {
 	hasPosition  bool
 	positionSide portfolio.PositionSide
-	currentTrade *portfolio.Trade
 	entryPrice   float64
 	entryTime    time.Time
 	stopLoss     *float64
@@ -197,14 +201,77 @@ func runBacktestLoop(
 	portfolioInstance *portfolio.Portfolio,
 	riskManager *risk.Manager,
 	executor *execution.SimpleExecutor,
+	brokerInstance *broker.Broker,
 	config BacktestConfig,
 ) ([]portfolio.Trade, []EquityPoint, *BacktestResult) {
 	var trades []portfolio.Trade
 	var equityCurve []EquityPoint
-	var state backtestState
+	state := backtestState{
+		hasPosition:  false,
+		positionSide: "",
+		entryPrice:   0,
+		entryTime:    time.Time{},
+		stopLoss:     nil,
+		takeProfit:   nil,
+	}
 
 	for _, candle := range candles {
 		executor.SetCurrentCandle(candle)
+
+		// Process pending orders from previous candles
+		filledOrders, err := brokerInstance.ProcessPendingOrders(candle, candle.Timestamp)
+		if err != nil {
+			continue
+		}
+
+		// Handle filled orders
+		for _, orderID := range filledOrders {
+			ord, _ := brokerInstance.GetOrder(orderID)
+			if ord == nil {
+				continue
+			}
+
+			// Update portfolio based on filled order
+			if ord.Side == order.OrderSideBuy {
+				if !state.hasPosition {
+					// Open long position
+					portfolioInstance.OpenPosition(
+						config.Symbol,
+						portfolio.PositionSideLong,
+						ord.FilledPrice,
+						candle.Timestamp,
+					)
+					state.hasPosition = true
+					state.positionSide = portfolio.PositionSideLong
+					state.entryPrice = ord.FilledPrice
+					state.entryTime = candle.Timestamp
+				}
+			} else if ord.Side == order.OrderSideSell {
+				if state.hasPosition && state.positionSide == portfolio.PositionSideLong {
+					// Close long position
+					trade := portfolioInstance.ClosePosition(
+						config.Symbol,
+						ord.FilledPrice,
+						candle.Timestamp,
+					)
+					trades = append(trades, *trade)
+					state.hasPosition = false
+					state.positionSide = ""
+				} else if !state.hasPosition {
+					// Open short position
+					portfolioInstance.OpenPosition(
+						config.Symbol,
+						portfolio.PositionSideShort,
+						ord.FilledPrice,
+						candle.Timestamp,
+					)
+					state.hasPosition = true
+					state.positionSide = portfolio.PositionSideShort
+					state.entryPrice = ord.FilledPrice
+					state.entryTime = candle.Timestamp
+				}
+			}
+		}
 
 		// Evaluate strategy
 		signals, err := evaluator.Evaluate(state.hasPosition, string(state.positionSide))
@@ -212,58 +279,68 @@ func runBacktestLoop(
 			continue
 		}
 
-		// Process signals
+		// Process signals and submit orders
 		for _, sig := range signals {
 			switch sig.Type {
 			case signal.SignalTypeLongEntry:
-				// Create position
-				portfolioInstance.OpenPosition(
-					config.Symbol,
-					portfolio.PositionSideLong,
-					sig.Price,
-					candle.Timestamp,
-				)
-				state.hasPosition = true
-				state.positionSide = portfolio.PositionSideLong
-				state.entryPrice = sig.Price
-				state.entryTime = candle.Timestamp
-				state.stopLoss, state.takeProfit = nil, nil
+				if !state.hasPosition {
+					// Submit market buy order
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideBuy,
+						Type:     order.OrderTypeMarket,
+						Quantity: 1.0, // TODO: calculate from risk config
+					}
+					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
+					if err != nil {
+						continue
+					}
+				}
 
 			case signal.SignalTypeShortEntry:
-				// Create position
-				portfolioInstance.OpenPosition(
-					config.Symbol,
-					portfolio.PositionSideShort,
-					sig.Price,
-					candle.Timestamp,
-				)
-				state.hasPosition = true
-				state.positionSide = portfolio.PositionSideShort
-				state.entryPrice = sig.Price
-				state.entryTime = candle.Timestamp
-				state.stopLoss, state.takeProfit = nil, nil
+				if !state.hasPosition {
+					// Submit market sell order
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideSell,
+						Type:     order.OrderTypeMarket,
+						Quantity: 1.0, // TODO: calculate from risk config
+					}
+					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
+					if err != nil {
+						continue
+					}
+				}
 
 			case signal.SignalTypeLongExit:
-				// Close position
-				trade := portfolioInstance.ClosePosition(
-					config.Symbol,
-					sig.Price,
-					candle.Timestamp,
-				)
-				trades = append(trades, *trade)
-				state.hasPosition = false
-				state.positionSide = ""
+				if state.hasPosition && state.positionSide == portfolio.PositionSideLong {
+					// Submit market sell order to close
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideSell,
+						Type:     order.OrderTypeMarket,
+						Quantity: 1.0,
+					}
+					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
+					if err != nil {
+						continue
+					}
+				}
 
 			case signal.SignalTypeShortExit:
-				// Close position
-				trade := portfolioInstance.ClosePosition(
-					config.Symbol,
-					sig.Price,
-					candle.Timestamp,
-				)
-				trades = append(trades, *trade)
-				state.hasPosition = false
-				state.positionSide = ""
+				if state.hasPosition && state.positionSide == portfolio.PositionSideShort {
+					// Submit market buy order to close
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideBuy,
+						Type:     order.OrderTypeMarket,
+						Quantity: 1.0,
+					}
+					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
+					if err != nil {
+						continue
+					}
+				}
 			}
 		}
 
