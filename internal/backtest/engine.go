@@ -124,6 +124,7 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	// Step 5: Calculate analytics
 	result := &BacktestResult{
 		Config:       config,
+		StrategyName: strategyAST.Name,
 		Portfolio:    portfolio,
 		TotalTrades:  len(tradeHistory),
 		StartTime:    candles[0].Timestamp,
@@ -254,7 +255,206 @@ func runBacktestLoop(
 	for _, candle := range candles {
 		executor.SetCurrentCandle(candle)
 
-		// Process pending orders from previous candles
+		// Update evaluator with current candle FIRST
+		// This ensures indicators are calculated before evaluating conditions
+		evaluator.UpdateCandle(*candle)
+
+		// Evaluate strategy
+		signals, err := evaluator.Evaluate(state.hasPosition, string(state.positionSide))
+		if err != nil {
+			continue
+		}
+
+		// Process signals and submit orders
+		fmt.Printf("[ENGINE] Processing %d signals\n", len(signals))
+		for _, sig := range signals {
+			fmt.Printf("[ENGINE] Signal type=%v, price=%.2f\n", sig.Type, sig.Price)
+			switch sig.Type {
+			case signal.SignalTypeLongEntry:
+				fmt.Printf("[ENGINE] Long entry signal: hasPosition=%v\n", state.hasPosition)
+				if !state.hasPosition {
+					// Calculate position size
+					quantity := 1.0
+					var stopDist float64
+					var sl float64
+					if stopLossCalc != nil {
+						// Get ATR value if needed
+						atrValue := 0.0
+						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
+							indicatorValues := evaluator.GetIndicatorValues()
+							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
+								atrValue = val
+							}
+						}
+						// Estimate stop distance for position sizing
+						var err error
+						sl, err = stopLossCalc.Calculate(candle.Close, "long", atrValue)
+						if err == nil && sl > 0 {
+							stopDist = absPrice(candle.Close - sl)
+						}
+					}
+					if positionSizer != nil {
+						slPrice := 0.0
+						if stopDist > 0 {
+							if candle.Close > sl {
+								slPrice = sl
+							} else {
+								slPrice = candle.Close - stopDist
+							}
+						}
+						qty, err := positionSizer.CalculateQuantity(candle.Close, portfolioInstance.Equity, slPrice)
+						if err == nil && qty > 0 {
+							quantity = qty
+						}
+					}
+
+					// Submit market buy order
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideBuy,
+						Type:     order.OrderTypeMarket,
+						Quantity: quantity,
+					}
+					fmt.Printf("[ENGINE] About to submit order: quantity=%.2f, price=%.2f\n", quantity, sig.Price)
+					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
+					if err != nil {
+						fmt.Printf("[ENGINE] ERROR submitting order: %v\n", err)
+						continue
+					}
+				}
+
+			case signal.SignalTypeShortEntry:
+				fmt.Printf("[ENGINE] Short entry signal: hasPosition=%v\n", state.hasPosition)
+				if !state.hasPosition {
+					// Calculate position size
+					quantity := 1.0
+					var stopDist float64
+					if stopLossCalc != nil {
+						// Get ATR value if needed
+						atrValue := 0.0
+						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
+							indicatorValues := evaluator.GetIndicatorValues()
+							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
+								atrValue = val
+							}
+						}
+						// Estimate stop distance for position sizing
+						sl, err := stopLossCalc.Calculate(candle.Close, "short", atrValue)
+						if err == nil && sl > 0 {
+							stopDist = absPrice(sl - candle.Close)
+						}
+					}
+					if positionSizer != nil {
+						slPrice := 0.0
+						if stopDist > 0 {
+							slPrice = candle.Close + stopDist
+						}
+						qty, err := positionSizer.CalculateQuantity(candle.Close, portfolioInstance.Equity, slPrice)
+						if err == nil && qty > 0 {
+							quantity = qty
+						}
+					}
+
+					// Submit market sell order
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideSell,
+						Type:     order.OrderTypeMarket,
+						Quantity: quantity,
+					}
+					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
+					if err != nil {
+						fmt.Printf("[ENGINE] ERROR submitting order: %v\n", err)
+						continue
+					}
+				}
+
+			case signal.SignalTypeLongExit:
+				if state.hasPosition && state.positionSide == portfolio.PositionSideLong {
+					// Submit market sell order to close
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideSell,
+						Type:     order.OrderTypeMarket,
+						Quantity: 1.0,
+					}
+					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
+					if err != nil {
+						fmt.Printf("[ENGINE] ERROR submitting order: %v\n", err)
+						continue
+					}
+				}
+
+			case signal.SignalTypeShortExit:
+				if state.hasPosition && state.positionSide == portfolio.PositionSideShort {
+					// Submit market buy order to close
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideBuy,
+						Type:     order.OrderTypeMarket,
+						Quantity: 1.0,
+					}
+					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
+					if err != nil {
+						fmt.Printf("[ENGINE] ERROR submitting order: %v\n", err)
+						continue
+					}
+				}
+			}
+		}
+
+		// Check stop loss and take profit if position is open
+		if state.hasPosition {
+			if state.stopLoss != nil {
+				if state.positionSide == portfolio.PositionSideLong && candle.Low <= *state.stopLoss {
+					// Stop loss hit for long position
+					req := order.OrderRequest{
+						Symbol:    config.Symbol,
+						Side:      order.OrderSideSell,
+						Type:      order.OrderTypeStop,
+						Quantity:  1.0,
+						StopPrice: state.stopLoss,
+					}
+					brokerInstance.SubmitOrder(req, candle.Timestamp)
+				} else if state.positionSide == portfolio.PositionSideShort && candle.High >= *state.stopLoss {
+					// Stop loss hit for short position
+					req := order.OrderRequest{
+						Symbol:    config.Symbol,
+						Side:      order.OrderSideBuy,
+						Type:      order.OrderTypeStop,
+						Quantity:  1.0,
+						StopPrice: state.stopLoss,
+					}
+					brokerInstance.SubmitOrder(req, candle.Timestamp)
+				}
+			}
+
+			if state.takeProfit != nil {
+				if state.positionSide == portfolio.PositionSideLong && candle.High >= *state.takeProfit {
+					// Take profit hit for long position
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideSell,
+						Type:     order.OrderTypeLimit,
+						Quantity: 1.0,
+						Price:    state.takeProfit,
+					}
+					brokerInstance.SubmitOrder(req, candle.Timestamp)
+				} else if state.positionSide == portfolio.PositionSideShort && candle.Low <= *state.takeProfit {
+					// Take profit hit for short position
+					req := order.OrderRequest{
+						Symbol:   config.Symbol,
+						Side:     order.OrderSideBuy,
+						Type:     order.OrderTypeLimit,
+						Quantity: 1.0,
+						Price:    state.takeProfit,
+					}
+					brokerInstance.SubmitOrder(req, candle.Timestamp)
+				}
+			}
+		}
+
+		// Process pending orders (including newly submitted ones)
 		filledOrders, err := brokerInstance.ProcessPendingOrders(candle, candle.Timestamp)
 		if err != nil {
 			continue
@@ -399,196 +599,6 @@ func runBacktestLoop(
 							state.takeProfit = &tp
 						}
 					}
-				}
-			}
-		}
-
-		// Update evaluator with current candle FIRST
-		// This ensures indicators are calculated before evaluating conditions
-		evaluator.UpdateCandle(*candle)
-
-		// Evaluate strategy
-		signals, err := evaluator.Evaluate(state.hasPosition, string(state.positionSide))
-		if err != nil {
-			continue
-		}
-
-		// Process signals and submit orders
-		for _, sig := range signals {
-			switch sig.Type {
-			case signal.SignalTypeLongEntry:
-				if !state.hasPosition {
-					// Calculate position size
-					quantity := 1.0
-					var stopDist float64
-					var sl float64
-					if stopLossCalc != nil {
-						// Get ATR value if needed
-						atrValue := 0.0
-						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
-							indicatorValues := evaluator.GetIndicatorValues()
-							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
-								atrValue = val
-							}
-						}
-						// Estimate stop distance for position sizing
-						var err error
-						sl, err = stopLossCalc.Calculate(candle.Close, "long", atrValue)
-						if err == nil && sl > 0 {
-							stopDist = absPrice(candle.Close - sl)
-						}
-					}
-					if positionSizer != nil {
-						slPrice := 0.0
-						if stopDist > 0 {
-							if candle.Close > sl {
-								slPrice = sl
-							} else {
-								slPrice = candle.Close - stopDist
-							}
-						}
-						qty, err := positionSizer.CalculateQuantity(candle.Close, portfolioInstance.Equity, slPrice)
-						if err == nil && qty > 0 {
-							quantity = qty
-						}
-					}
-
-					// Submit market buy order
-					req := order.OrderRequest{
-						Symbol:   config.Symbol,
-						Side:     order.OrderSideBuy,
-						Type:     order.OrderTypeMarket,
-						Quantity: quantity,
-					}
-					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
-					if err != nil {
-						continue
-					}
-				}
-
-			case signal.SignalTypeShortEntry:
-				if !state.hasPosition {
-					// Calculate position size
-					quantity := 1.0
-					var stopDist float64
-					if stopLossCalc != nil {
-						// Get ATR value if needed
-						atrValue := 0.0
-						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
-							indicatorValues := evaluator.GetIndicatorValues()
-							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
-								atrValue = val
-							}
-						}
-						// Estimate stop distance for position sizing
-						sl, err := stopLossCalc.Calculate(candle.Close, "short", atrValue)
-						if err == nil && sl > 0 {
-							stopDist = absPrice(sl - candle.Close)
-						}
-					}
-					if positionSizer != nil {
-						slPrice := 0.0
-						if stopDist > 0 {
-							slPrice = candle.Close + stopDist
-						}
-						qty, err := positionSizer.CalculateQuantity(candle.Close, portfolioInstance.Equity, slPrice)
-						if err == nil && qty > 0 {
-							quantity = qty
-						}
-					}
-
-					// Submit market sell order
-					req := order.OrderRequest{
-						Symbol:   config.Symbol,
-						Side:     order.OrderSideSell,
-						Type:     order.OrderTypeMarket,
-						Quantity: quantity,
-					}
-					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
-					if err != nil {
-						continue
-					}
-				}
-
-			case signal.SignalTypeLongExit:
-				if state.hasPosition && state.positionSide == portfolio.PositionSideLong {
-					// Submit market sell order to close
-					req := order.OrderRequest{
-						Symbol:   config.Symbol,
-						Side:     order.OrderSideSell,
-						Type:     order.OrderTypeMarket,
-						Quantity: 1.0,
-					}
-					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
-					if err != nil {
-						continue
-					}
-				}
-
-			case signal.SignalTypeShortExit:
-				if state.hasPosition && state.positionSide == portfolio.PositionSideShort {
-					// Submit market buy order to close
-					req := order.OrderRequest{
-						Symbol:   config.Symbol,
-						Side:     order.OrderSideBuy,
-						Type:     order.OrderTypeMarket,
-						Quantity: 1.0,
-					}
-					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
-					if err != nil {
-						continue
-					}
-				}
-			}
-		}
-
-		// Check stop loss and take profit if position is open
-		if state.hasPosition {
-			if state.stopLoss != nil {
-				if state.positionSide == portfolio.PositionSideLong && candle.Low <= *state.stopLoss {
-					// Stop loss hit for long position
-					req := order.OrderRequest{
-						Symbol:    config.Symbol,
-						Side:      order.OrderSideSell,
-						Type:      order.OrderTypeStop,
-						Quantity:  1.0,
-						StopPrice: state.stopLoss,
-					}
-					brokerInstance.SubmitOrder(req, candle.Timestamp)
-				} else if state.positionSide == portfolio.PositionSideShort && candle.High >= *state.stopLoss {
-					// Stop loss hit for short position
-					req := order.OrderRequest{
-						Symbol:    config.Symbol,
-						Side:      order.OrderSideBuy,
-						Type:      order.OrderTypeStop,
-						Quantity:  1.0,
-						StopPrice: state.stopLoss,
-					}
-					brokerInstance.SubmitOrder(req, candle.Timestamp)
-				}
-			}
-
-			if state.takeProfit != nil {
-				if state.positionSide == portfolio.PositionSideLong && candle.High >= *state.takeProfit {
-					// Take profit hit for long position
-					req := order.OrderRequest{
-						Symbol:   config.Symbol,
-						Side:     order.OrderSideSell,
-						Type:     order.OrderTypeLimit,
-						Quantity: 1.0,
-						Price:    state.takeProfit,
-					}
-					brokerInstance.SubmitOrder(req, candle.Timestamp)
-				} else if state.positionSide == portfolio.PositionSideShort && candle.Low <= *state.takeProfit {
-					// Take profit hit for short position
-					req := order.OrderRequest{
-						Symbol:   config.Symbol,
-						Side:     order.OrderSideBuy,
-						Type:     order.OrderTypeLimit,
-						Quantity: 1.0,
-						Price:    state.takeProfit,
-					}
-					brokerInstance.SubmitOrder(req, candle.Timestamp)
 				}
 			}
 		}

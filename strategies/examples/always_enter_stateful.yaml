@@ -1,0 +1,45 @@
+strategy:
+  name: always_enter_stateful
+  version: "1"
+  description: "Always enter strategy to test stateful infrastructure"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+state:
+  last_entry_bar:
+    default: 0
+
+indicators:
+
+  sma_simple:
+    type: sma
+    source: close
+    period: 2
+
+entry:
+
+  long:
+    all:
+      - gt: [close, 0]  # Always true since close > 0
+
+exit:
+
+  long:
+    all:
+      - gt: [sma_simple, 0]  # Exit on next candle
+
+risk:
+
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: fixed_percent
+    value: 0.01
+
+  take_profit:
+    type: fixed_percent
+    value: 0.02

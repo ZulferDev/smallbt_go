@@ -22,6 +22,7 @@ type BacktestConfig struct {
 // BacktestResult holds the results of a backtest.
 type BacktestResult struct {
 	Config       BacktestConfig
+	StrategyName string
 	Portfolio    *portfolio.Portfolio
 	TotalTrades  int
 	StartTime    time.Time

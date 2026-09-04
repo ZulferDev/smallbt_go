@@ -1,0 +1,10 @@
+--- internal/broker/broker.go
++++ internal/broker/broker.go
+@@ -47,6 +47,7 @@ func (b *Broker) SubmitOrder(req order.OrderRequest, timestamp time.Time) (string
+ 		Symbol:    req.Symbol,
+ 		Side:      req.Side,
+ 		Type:      req.Type,
++		Quantity:  req.Quantity,
+ 		Price:     req.Price,
+ 		StopPrice: req.StopPrice,
+ 		Status:    order.OrderStatusPending,

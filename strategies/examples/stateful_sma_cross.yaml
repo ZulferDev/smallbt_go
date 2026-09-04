@@ -1,0 +1,47 @@
+# Stateful SMA Cross strategy - should work like simple_test but with state
+strategy:
+  name: stateful_sma_cross
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+state:
+  setup_valid:
+    default: false
+
+indicators:
+  sma_fast:
+    type: sma
+    source: close
+    period: 5
+
+  sma_slow:
+    type: sma
+    source: close
+    period: 10
+
+rules:
+
+  - when:
+      cross_above: [sma_fast, sma_slow]
+    set:
+      setup_valid: true
+
+entry:
+  long:
+    all:
+      - setup_valid: true
+
+exit:
+  long:
+    any:
+      - cross_below: [sma_fast, sma_slow]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.5
+
+  max_positions: 1

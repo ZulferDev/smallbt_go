@@ -1,0 +1,54 @@
+strategy:
+  name: simple_stateful_test
+  version: "1"
+  description: "Simple stateful strategy for testing"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+state:
+  last_signal_time:
+    default: ""
+  signal_count:
+    default: 0
+  consecutive_losses:
+    default: 0
+
+indicators:
+
+  sma_fast:
+    type: sma
+    source: close
+    period: 9
+
+  sma_slow:
+    type: sma
+    source: close
+    period: 21
+
+entry:
+
+  long:
+    all:
+      - cross_above: [sma_fast, sma_slow]
+
+exit:
+
+  long:
+    any:
+      - cross_below: [sma_fast, sma_slow]
+
+risk:
+
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: fixed_percent
+    value: 0.02
+
+  take_profit:
+    type: fixed_percent
+    value: 0.04

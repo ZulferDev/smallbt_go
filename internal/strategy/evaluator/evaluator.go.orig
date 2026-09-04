@@ -189,20 +189,19 @@ func isCompositeIndicator(indicatorType string) bool {
 
 // UpdateCandle updates the evaluator with a new candle and calculates indicators.
 func (e *Evaluator) UpdateCandle(candle market.Candle) error {
-	// Add candle to history first to get correct barIndex
-	e.candles = append(e.candles, candle)
-	barIndex := len(e.candles) - 1
-	fmt.Printf("[DEBUG] Bar %d: UpdateCandle START\n", barIndex)
 	// Save previous indicator values before calculating new ones
 	// This is needed for cross detection
 	for k, v := range e.values {
 		e.prevValues[k] = v
 	}
 
+	// Add candle to history
+	e.candles = append(e.candles, candle)
+
 	// Update context
 	e.context.Current = candle
 	e.context.Candles = e.candles
-	e.context.BarIndex = barIndex
+	e.context.BarIndex = len(e.candles) - 1
 
 	// Calculate basic indicators first
 	for name, ind := range e.indicators {
@@ -232,24 +231,17 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 		}
 	}
 	
-	if barIndex == 0 {
+	if e.context.BarIndex == 0 {
 		fmt.Printf("[DEBUG] Found %d composite indicators: %v\n", len(compositeNames), compositeNames)
 	}
 
 	// Topologically sort composite indicators based on dependencies
 	sortedCompositeNames, err := e.topologicalSortCompositeIndicators(compositeNames)
 	if err != nil {
-		fmt.Printf("[DEBUG] Error sorting composite indicators: %v\n", err)
 		return fmt.Errorf("sort composite indicators: %w", err)
 	}
-	
-	if barIndex == 0 {
-		fmt.Printf("[DEBUG] Sorted composite indicators: %v\n", sortedCompositeNames)
-	}
 
-	fmt.Printf("[DEBUG] Bar %d: About to loop through %d composite indicators\n", barIndex, len(sortedCompositeNames))
 	for _, name := range sortedCompositeNames {
-		fmt.Printf("[DEBUG] Bar %d: Processing composite indicator '%s'\n", barIndex, name)
 		ind := e.indicators[name]
 		if _, isComposite := ind.(*compositeIndicator); !isComposite {
 			fmt.Printf("[DEBUG] Skipping non-composite indicator: %s\n", name)
@@ -258,26 +250,20 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 
 		value, err := ind.Calculate(e.context)
 		if err != nil {
-			fmt.Printf("[DEBUG] Bar %d: ERROR calculating composite indicator '%s': %v\n", barIndex, name, err)
 			return fmt.Errorf("calculate indicator %s: %w", name, err)
 		}
 		e.context.IndicatorValues[name] = value
 		if value.Valid {
 			e.values[name] = value.Value
-			fmt.Printf("[DEBUG] Bar %d: Stored composite indicator '%s' value: %.4f\n", barIndex, name, e.values[name])
 		} else {
 			e.values[name] = 0
-			fmt.Printf("[DEBUG] Bar %d: Composite indicator '%s' is invalid, stored 0\n", barIndex, name)
 		}
 		
 		if e.context.BarIndex == 0 {
-			fmt.Printf("[DEBUG] Bar %d: About to calculate composite indicator '%s'\n", barIndex, name)
-			fmt.Printf("[DEBUG] Bar %d: Stored composite indicator '%s' value: %.4f\n", barIndex, name, e.values[name])
+			fmt.Printf("[DEBUG] Bar 0: About to calculate composite indicator '%s'\n", name)
+			fmt.Printf("[DEBUG] Stored composite indicator '%s' value: %.4f\n", name, e.values[name])
 		}
 	}
-	
-	fmt.Printf("[DEBUG] Bar %d: After composite indicator loop: volume_ratio=%v\n", barIndex, e.values["volume_ratio"])
-	fmt.Printf("[DEBUG] Bar %d: UpdateCandle END\n", barIndex)
 
 	return nil
 }
@@ -292,10 +278,8 @@ func (e *Evaluator) Evaluate(hasPosition bool, positionSide string) ([]signal.Si
 	}
 
 	currentCandle := e.candles[len(e.candles)-1]
-	barIndex := len(e.candles) - 1
 
 	// DEBUG: Log when evaluate is called
-	fmt.Printf("[DEBUG] Bar %d: Evaluate START\n", barIndex)
 	fmt.Printf("[EVALUATE] candle=%d, hasPosition=%v, positionSide=%s, indicators=%d\n", 
 		len(e.candles), hasPosition, positionSide, len(e.prevValues))
 
@@ -313,7 +297,6 @@ func (e *Evaluator) Evaluate(hasPosition bool, positionSide string) ([]signal.Si
 					Price:     currentCandle.Close,
 					Reason:    "long entry signal",
 				})
-				fmt.Printf("[SIGNAL] Generated long entry signal at bar %d, price=%.2f\n", len(e.candles), currentCandle.Close)
 			}
 		}
 
@@ -355,7 +338,6 @@ func (e *Evaluator) Evaluate(hasPosition bool, positionSide string) ([]signal.Si
 		}
 	}
 
-	fmt.Printf("[DEBUG] Bar %d: Returning %d signals\n", len(e.candles)-1, len(signals))
 	return signals, nil
 }
 
@@ -402,7 +384,7 @@ func (e *Evaluator) evaluateCondition(cond *ast.Condition) bool {
 
 // evaluateFunction evaluates a function-based condition.
 func (e *Evaluator) evaluateFunction(fn string, args []interface{}) bool {
-	fmt.Printf("[DEBUG] Bar %d: evaluateFunction(%s, %v)\n", e.context.BarIndex, fn, args)
+	fmt.Printf("[DEBUG] evaluateFunction(%s, %v)\n", fn, args)
 	if len(args) < 2 {
 		fmt.Printf("[DEBUG] evaluateFunction: insufficient args (%d)\n", len(args))
 		return false
@@ -520,8 +502,7 @@ func (e *Evaluator) EvaluateExpression(fn string, args []interface{}) (float64, 
 		return result, nil
 	case "divide":
 		if values[1] == 0 {
-			// Return 0 instead of error - indicator not ready yet
-			return 0, nil
+			return 0, fmt.Errorf("division by zero")
 		}
 		return values[0] / values[1], nil
 	case "modulo":

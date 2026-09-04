@@ -1,0 +1,77 @@
+strategy:
+  name: stateful_trend_follow
+  version: "1"
+  description: "Trend following strategy with state tracking"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 4h
+
+state:
+  trend_confirmed:
+    default: false
+  entry_count:
+    default: 0
+  max_drawdown_seen:
+    default: 0
+
+indicators:
+
+  sma_fast:
+    type: sma
+    source: close
+    period: 9
+
+  sma_slow:
+    type: sma
+    source: close
+    period: 21
+
+  sma_trend:
+    type: sma
+    source: close
+    period: 50
+
+  atr:
+    type: atr
+    period: 14
+
+  rsi:
+    type: rsi
+    period: 14
+
+  volume_avg:
+    type: sma
+    source: volume
+    period: 20
+
+entry:
+
+  long:
+    all:
+      - cross_above: [sma_fast, sma_slow]
+      - gt: [close, sma_trend]
+      - gt: [volume, volume_avg]
+      - between: [rsi, 30, 70]
+
+exit:
+
+  long:
+    any:
+      - cross_below: [sma_fast, sma_slow]
+      - lt: [rsi, 25]
+
+risk:
+
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: atr
+    indicator: atr
+    multiplier: 2.0
+
+  take_profit:
+    type: risk_reward
+    ratio: 2.5

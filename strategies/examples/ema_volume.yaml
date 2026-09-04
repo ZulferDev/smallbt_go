@@ -36,23 +36,12 @@ entry:
   long:
     all:
       - cross_above: [ema_fast, ema_slow]
-      - gt: [volume_ratio, 1.2]
-
-  short:
-    all:
-      - cross_below: [ema_fast, ema_slow]
-      - gt: [volume_ratio, 1.2]
+      - gt: [volume_ratio, 1.0]
 
 exit:
   long:
     any:
       - cross_below: [ema_fast, ema_slow]
-      - eq: [stop_loss_hit, true]
-
-  short:
-    any:
-      - cross_above: [ema_fast, ema_slow]
-      - eq: [stop_loss_hit, true]
 
 risk:
   position_size:
