@@ -190,8 +190,46 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 	e.context.Candles = e.candles
 	e.context.BarIndex = len(e.candles) - 1
 
-	// Calculate all indicators
+	// Calculate basic indicators first
 	for name, ind := range e.indicators {
+		// Skip composite indicators in first pass
+		if _, isComposite := ind.(*compositeIndicator); isComposite {
+			continue
+		}
+		
+		value, err := ind.Calculate(e.context)
+		if err != nil {
+			return fmt.Errorf("calculate indicator %s: %w", name, err)
+		}
+		e.context.IndicatorValues[name] = value
+		if value.Valid {
+			e.values[name] = value.Value
+		} else {
+			e.values[name] = 0
+		}
+	}
+
+	// Calculate composite indicators second (after basic indicators have values)
+	// Use topological sort to handle dependencies between composite indicators
+	compositeNames := make([]string, 0)
+	for name := range e.indicators {
+		if _, isComposite := e.indicators[name].(*compositeIndicator); isComposite {
+			compositeNames = append(compositeNames, name)
+		}
+	}
+	
+	// Topologically sort composite indicators based on dependencies
+	sortedCompositeNames, err := e.topologicalSortCompositeIndicators(compositeNames)
+	if err != nil {
+		return fmt.Errorf("sort composite indicators: %w", err)
+	}
+	
+	for _, name := range sortedCompositeNames {
+		ind := e.indicators[name]
+		if _, isComposite := ind.(*compositeIndicator); !isComposite {
+			continue
+		}
+		
 		value, err := ind.Calculate(e.context)
 		if err != nil {
 			return fmt.Errorf("calculate indicator %s: %w", name, err)
@@ -544,4 +582,90 @@ func (e *Evaluator) SetStateMap(stateMap map[string]interface{}) {
 	for k, v := range stateMap {
 		e.state[k] = v
 	}
+}
+
+// topologicalSortCompositeIndicators sorts composite indicators by their dependencies.
+func (e *Evaluator) topologicalSortCompositeIndicators(names []string) ([]string, error) {
+	// Build dependency graph
+	deps := make(map[string][]string)
+	for _, name := range names {
+		ind, ok := e.indicators[name].(*compositeIndicator)
+		if !ok {
+			continue
+		}
+		
+		deps[name] = make([]string, 0)
+		if ind.def.Left != "" {
+			deps[name] = append(deps[name], ind.def.Left)
+		}
+		if ind.def.Right != "" {
+			deps[name] = append(deps[name], ind.def.Right)
+		}
+	}
+	
+	// Kahn's algorithm for topological sorting
+	inDegree := make(map[string]int)
+	for _, name := range names {
+		inDegree[name] = 0
+	}
+	
+	for _, name := range names {
+		for _, dep := range deps[name] {
+			// Only count dependencies on other composite indicators
+			if _, isComposite := inDegree[dep]; isComposite {
+				inDegree[name]++  // name depends on dep
+			}
+		}
+	}
+	
+	queue := make([]string, 0)
+	for _, name := range names {
+		if inDegree[name] == 0 {
+			queue = append(queue, name)
+		}
+	}
+	
+	sorted := make([]string, 0)
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		sorted = append(sorted, current)
+		
+		// For each indicator that depends on current
+		for _, name := range names {
+			for _, dep := range deps[name] {
+				if dep == current {
+					inDegree[name]--
+					if inDegree[name] == 0 {
+						queue = append(queue, name)
+					}
+				}
+			}
+		}
+	}
+	
+	// Check for cycles
+	if len(sorted) != len(names) {
+		return nil, fmt.Errorf("circular dependency detected in composite indicators")
+	}
+	
+	return sorted, nil
+}
+
+// GetIndicatorValue returns the current value of an indicator by name.
+func (e *Evaluator) GetIndicatorValue(name string) (float64, error) {
+	val, ok := e.values[name]
+	if !ok {
+		return 0, fmt.Errorf("indicator %q not found", name)
+	}
+	
+	if val == 0 {
+		// Check if indicator exists but has no value yet
+		_, hasIndicator := e.indicators[name]
+		if hasIndicator {
+			return 0, fmt.Errorf("indicator %q has no values yet", name)
+		}
+	}
+	
+	return val, nil
 }
