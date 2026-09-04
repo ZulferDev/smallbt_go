@@ -15,8 +15,8 @@ type Evaluator struct {
 	registry   *indicator.Registry
 	indicators map[string]indicator.Indicator
 	context    *indicator.Context
-	values     map[string]float64 // Current indicator values
-	candles    []market.Candle    // Historical candles
+	values     map[string]float64     // Current indicator values
+	candles    []market.Candle        // Historical candles
 	state      map[string]interface{} // Strategy state variables
 }
 
@@ -68,7 +68,7 @@ func (e *Evaluator) Initialize() error {
 			Period: def.Period,
 			Source: def.Source,
 		}
-		
+
 		// If Period is 0, check Params map
 		if config.Period == 0 && def.Params != nil {
 			if p, ok := def.Params["period"]; ok {
@@ -80,7 +80,7 @@ func (e *Evaluator) Initialize() error {
 				}
 			}
 		}
-		
+
 		// If Source is empty, check Params map
 		if config.Source == "" && def.Params != nil {
 			if s, ok := def.Params["source"]; ok {
@@ -89,7 +89,7 @@ func (e *Evaluator) Initialize() error {
 				}
 			}
 		}
-		
+
 		ind, err := e.registry.Create(config)
 		if err != nil {
 			return fmt.Errorf("create indicator %s: %w", name, err)
@@ -130,7 +130,7 @@ func (ci *compositeIndicator) Name() string {
 func (ci *compositeIndicator) Calculate(ctx *indicator.Context) (indicator.Value, error) {
 	// Extract args from struct fields (Left, Right) or Params map for backward compatibility
 	args := make([]interface{}, 0)
-	
+
 	// Check struct fields first (new style)
 	if ci.def.Left != "" {
 		args = append(args, ci.def.Left)
@@ -138,7 +138,7 @@ func (ci *compositeIndicator) Calculate(ctx *indicator.Context) (indicator.Value
 	if ci.def.Right != "" {
 		args = append(args, ci.def.Right)
 	}
-	
+
 	// Fall back to Params map for backward compatibility
 	if len(args) == 0 {
 		if left, ok := ci.def.Params["left"]; ok {
@@ -196,7 +196,7 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 		if _, isComposite := ind.(*compositeIndicator); isComposite {
 			continue
 		}
-		
+
 		value, err := ind.Calculate(e.context)
 		if err != nil {
 			return fmt.Errorf("calculate indicator %s: %w", name, err)
@@ -217,19 +217,19 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 			compositeNames = append(compositeNames, name)
 		}
 	}
-	
+
 	// Topologically sort composite indicators based on dependencies
 	sortedCompositeNames, err := e.topologicalSortCompositeIndicators(compositeNames)
 	if err != nil {
 		return fmt.Errorf("sort composite indicators: %w", err)
 	}
-	
+
 	for _, name := range sortedCompositeNames {
 		ind := e.indicators[name]
 		if _, isComposite := ind.(*compositeIndicator); !isComposite {
 			continue
 		}
-		
+
 		value, err := ind.Calculate(e.context)
 		if err != nil {
 			return fmt.Errorf("calculate indicator %s: %w", name, err)
@@ -593,7 +593,7 @@ func (e *Evaluator) topologicalSortCompositeIndicators(names []string) ([]string
 		if !ok {
 			continue
 		}
-		
+
 		deps[name] = make([]string, 0)
 		if ind.def.Left != "" {
 			deps[name] = append(deps[name], ind.def.Left)
@@ -602,35 +602,35 @@ func (e *Evaluator) topologicalSortCompositeIndicators(names []string) ([]string
 			deps[name] = append(deps[name], ind.def.Right)
 		}
 	}
-	
+
 	// Kahn's algorithm for topological sorting
 	inDegree := make(map[string]int)
 	for _, name := range names {
 		inDegree[name] = 0
 	}
-	
+
 	for _, name := range names {
 		for _, dep := range deps[name] {
 			// Only count dependencies on other composite indicators
 			if _, isComposite := inDegree[dep]; isComposite {
-				inDegree[name]++  // name depends on dep
+				inDegree[name]++ // name depends on dep
 			}
 		}
 	}
-	
+
 	queue := make([]string, 0)
 	for _, name := range names {
 		if inDegree[name] == 0 {
 			queue = append(queue, name)
 		}
 	}
-	
+
 	sorted := make([]string, 0)
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
 		sorted = append(sorted, current)
-		
+
 		// For each indicator that depends on current
 		for _, name := range names {
 			for _, dep := range deps[name] {
@@ -643,12 +643,12 @@ func (e *Evaluator) topologicalSortCompositeIndicators(names []string) ([]string
 			}
 		}
 	}
-	
+
 	// Check for cycles
 	if len(sorted) != len(names) {
 		return nil, fmt.Errorf("circular dependency detected in composite indicators")
 	}
-	
+
 	return sorted, nil
 }
 
@@ -658,7 +658,7 @@ func (e *Evaluator) GetIndicatorValue(name string) (float64, error) {
 	if !ok {
 		return 0, fmt.Errorf("indicator %q not found", name)
 	}
-	
+
 	if val == 0 {
 		// Check if indicator exists but has no value yet
 		_, hasIndicator := e.indicators[name]
@@ -666,6 +666,6 @@ func (e *Evaluator) GetIndicatorValue(name string) (float64, error) {
 			return 0, fmt.Errorf("indicator %q has no values yet", name)
 		}
 	}
-	
+
 	return val, nil
 }

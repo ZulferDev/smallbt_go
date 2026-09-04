@@ -394,14 +394,15 @@ func runBacktestLoop(
 			}
 		}
 
+		// Update evaluator with current candle FIRST
+		// This ensures indicators are calculated before evaluating conditions
+		evaluator.UpdateCandle(*candle)
+
 		// Evaluate strategy
 		signals, err := evaluator.Evaluate(state.hasPosition, string(state.positionSide))
 		if err != nil {
 			continue
 		}
-
-		// Update evaluator with current candle for risk calculations
-		evaluator.UpdateCandle(*candle)
 
 		// Process signals and submit orders
 		for _, sig := range signals {

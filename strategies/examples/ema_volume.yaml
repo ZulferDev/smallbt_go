@@ -1,0 +1,78 @@
+# EMA Volume ATR Strategy - MVP Example from AGENTS.md section 87
+strategy:
+  name: ema_volume_atr
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 4h
+
+indicators:
+  ema_fast:
+    type: ema
+    source: close
+    period: 9
+
+  ema_slow:
+    type: ema
+    source: close
+    period: 21
+
+  volume_avg:
+    type: sma
+    source: volume
+    period: 20
+
+  volume_ratio:
+    type: divide
+    left: volume
+    right: volume_avg
+
+  atr:
+    type: atr
+    period: 14
+
+entry:
+  long:
+    all:
+      - cross_above: [ema_fast, ema_slow]
+      - gt: [volume_ratio, 1.2]
+
+  short:
+    all:
+      - cross_below: [ema_fast, ema_slow]
+      - gt: [volume_ratio, 1.2]
+
+exit:
+  long:
+    any:
+      - cross_below: [ema_fast, ema_slow]
+      - eq: [stop_loss_hit, true]
+
+  short:
+    any:
+      - cross_above: [ema_fast, ema_slow]
+      - eq: [stop_loss_hit, true]
+
+risk:
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: atr
+    indicator: atr
+    multiplier: 1.5
+
+  take_profit:
+    type: risk_reward
+    ratio: 2
+
+  max_positions: 1
+  max_daily_loss: 0.02
+  max_portfolio_risk: 0.05
+
+state:
+  stop_loss_hit:
+    type: bool
+    default: false

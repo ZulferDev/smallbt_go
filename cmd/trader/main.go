@@ -1,8 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+
+	"github.com/1jehuang/backtest/internal/strategy/parser"
 )
 
 func main() {
@@ -62,7 +65,68 @@ EXAMPLES:
 }
 
 func runValidate(args []string) error {
-	fmt.Println("Validation not yet implemented")
+	fs := flag.NewFlagSet("validate", flag.ExitOnError)
+	strategyPath := fs.String("strategy", "", "Path to strategy YAML file")
+	
+	// Parse flags
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("parse flags: %w", err)
+	}
+	
+	if *strategyPath == "" {
+		// Try to use first positional argument
+		if len(fs.Args()) > 0 {
+			*strategyPath = fs.Arg(0)
+		}
+	}
+	
+	if *strategyPath == "" {
+		return fmt.Errorf("strategy file path required")
+	}
+	
+	// Parse and validate strategy
+	parser := parser.NewParser()
+	strategy, err := parser.ParseFile(*strategyPath)
+	if err != nil {
+		return fmt.Errorf("validate strategy: %w", err)
+	}
+	
+	// Basic validation
+	if strategy.Name == "" {
+		fmt.Println("⚠️  Warning: Strategy name is empty")
+	}
+	
+	if strategy.Data.Symbol == "" {
+		fmt.Println("⚠️  Warning: Data symbol not specified")
+	}
+	
+	if len(strategy.Indicators) == 0 {
+		fmt.Println("⚠️  Warning: No indicators defined")
+	}
+	
+	if strategy.Entry.Long == nil && strategy.Entry.Short == nil {
+		fmt.Println("⚠️  Warning: No entry rules defined (long or short)")
+	}
+	
+	fmt.Printf("✅ Strategy '%s' (v%s) validated successfully\n", strategy.Name, strategy.Version)
+	fmt.Printf("   Symbol: %s, Timeframe: %s\n", strategy.Data.Symbol, strategy.Data.Timeframe)
+	fmt.Printf("   Indicators: %d\n", len(strategy.Indicators))
+	
+	// Count entry rules
+	entryRules := 0
+	if strategy.Entry.Long != nil {
+		entryRules++
+	}
+	if strategy.Entry.Short != nil {
+		entryRules++
+	}
+	fmt.Printf("   Entry rules: %d\n", entryRules)
+	
+	// Show indicators
+	for name, indicator := range strategy.Indicators {
+		fmt.Printf("   - %s: %s (period: %d)\n", name, indicator.Type, indicator.Period)
+	}
+	
 	return nil
 }
 

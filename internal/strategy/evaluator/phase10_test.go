@@ -203,9 +203,9 @@ func TestNoLookaheadMTF(t *testing.T) {
 func TestTimeframeConfigurationStorage(t *testing.T) {
 	// Test that Timeframe field in IndicatorDef is preserved
 	indicators := map[string]ast.IndicatorDef{
-		"ema_1h":  {Type: "ema", Period: 9, Timeframe: "1h"},
-		"ema_4h":  {Type: "ema", Period: 21, Timeframe: "4h"},
-		"ema_1d":  {Type: "ema", Period: 200, Timeframe: "1d"},
+		"ema_1h": {Type: "ema", Period: 9, Timeframe: "1h"},
+		"ema_4h": {Type: "ema", Period: 21, Timeframe: "4h"},
+		"ema_1d": {Type: "ema", Period: 200, Timeframe: "1d"},
 	}
 
 	assert.Equal(t, "1h", indicators["ema_1h"].Timeframe)
