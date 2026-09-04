@@ -11,13 +11,14 @@ import (
 
 // Evaluator evaluates a strategy against market data.
 type Evaluator struct {
-	strategy   *ast.Strategy
-	registry   *indicator.Registry
-	indicators map[string]indicator.Indicator
-	context    *indicator.Context
-	values     map[string]float64     // Current indicator values
-	candles    []market.Candle        // Historical candles
-	state      map[string]interface{} // Strategy state variables
+	strategy        *ast.Strategy
+	registry        *indicator.Registry
+	indicators      map[string]indicator.Indicator
+	context         *indicator.Context
+	values          map[string]float64     // Current indicator values
+	prevValues      map[string]float64     // Previous indicator values for cross detection
+	candles         []market.Candle        // Historical candles
+	state           map[string]interface{} // Strategy state variables
 }
 
 // NewEvaluator creates a new strategy evaluator.
@@ -27,6 +28,7 @@ func NewEvaluator(strat *ast.Strategy, registry *indicator.Registry, symbol mark
 		registry:   registry,
 		indicators: make(map[string]indicator.Indicator),
 		values:     make(map[string]float64),
+		prevValues: make(map[string]float64),
 		context: &indicator.Context{
 			Symbol:          symbol,
 			Timeframe:       timeframe,
@@ -182,6 +184,12 @@ func isCompositeIndicator(indicatorType string) bool {
 
 // UpdateCandle updates the evaluator with a new candle and calculates indicators.
 func (e *Evaluator) UpdateCandle(candle market.Candle) error {
+	// Save previous indicator values before calculating new ones
+	// This is needed for cross detection
+	for k, v := range e.values {
+		e.prevValues[k] = v
+	}
+
 	// Add candle to history
 	e.candles = append(e.candles, candle)
 
@@ -382,17 +390,33 @@ func (e *Evaluator) evaluateFunction(fn string, args []interface{}) bool {
 	case "ne":
 		return values[0] != values[1]
 	case "cross_above":
-		// TODO: Implement cross detection with history
-		return false
+		// cross_above: [line1, line2]
+		// returns true if line1 crossed above line2 between bar[t-1] and bar[t]
+		if len(args) < 2 {
+			return false
+		}
+		return e.crossAbove(args[0], args[1])
 	case "cross_below":
-		// TODO: Implement cross detection with history
-		return false
+		// cross_below: [line1, line2]
+		// returns true if line1 crossed below line2 between bar[t-1] and bar[t]
+		if len(args) < 2 {
+			return false
+		}
+		return e.crossBelow(args[0], args[1])
 	case "rising":
-		// TODO: Implement rising detection with history
-		return false
+		// rising: [value]
+		// returns true if value is rising (current > previous)
+		if len(args) < 1 {
+			return false
+		}
+		return e.isRising(args[0])
 	case "falling":
-		// TODO: Implement falling detection with history
-		return false
+		// falling: [value]
+		// returns true if value is falling (current < previous)
+		if len(args) < 1 {
+			return false
+		}
+		return e.isFalling(args[0])
 	case "between":
 		if len(values) >= 3 {
 			return values[0] >= values[1] && values[0] <= values[2]
@@ -668,4 +692,137 @@ func (e *Evaluator) GetIndicatorValue(name string) (float64, error) {
 	}
 
 	return val, nil
+}
+
+// crossAbove detects if line1 crossed above line2 between bar[t-1] and bar[t]
+func (e *Evaluator) crossAbove(line1Arg, line2Arg interface{}) bool {
+	if len(e.candles) < 2 {
+		return false
+	}
+
+	// Get current values
+	val1Current, err1 := e.resolveValueAt(line1Arg, len(e.candles)-1)
+	val2Current, err2 := e.resolveValueAt(line2Arg, len(e.candles)-1)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+
+	// Get previous values
+	val1Prev, err1 := e.resolveValueAt(line1Arg, len(e.candles)-2)
+	val2Prev, err2 := e.resolveValueAt(line2Arg, len(e.candles)-2)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+
+	// cross_above: line1 was below line2, now above
+	return val1Prev <= val2Prev && val1Current > val2Current
+}
+
+// crossBelow detects if line1 crossed below line2 between bar[t-1] and bar[t]
+func (e *Evaluator) crossBelow(line1Arg, line2Arg interface{}) bool {
+	if len(e.candles) < 2 {
+		return false
+	}
+
+	// Get current values
+	val1Current, err1 := e.resolveValueAt(line1Arg, len(e.candles)-1)
+	val2Current, err2 := e.resolveValueAt(line2Arg, len(e.candles)-1)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+
+	// Get previous values
+	val1Prev, err1 := e.resolveValueAt(line1Arg, len(e.candles)-2)
+	val2Prev, err2 := e.resolveValueAt(line2Arg, len(e.candles)-2)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+
+	// cross_below: line1 was above line2, now below
+	return val1Prev >= val2Prev && val1Current < val2Current
+}
+
+// isRising detects if value is rising (current > previous)
+func (e *Evaluator) isRising(arg interface{}) bool {
+	if len(e.candles) < 2 {
+		return false
+	}
+
+	valCurrent, err := e.resolveValueAt(arg, len(e.candles)-1)
+	if err != nil {
+		return false
+	}
+
+	valPrev, err := e.resolveValueAt(arg, len(e.candles)-2)
+	if err != nil {
+		return false
+	}
+
+	return valCurrent > valPrev
+}
+
+// isFalling detects if value is falling (current < previous)
+func (e *Evaluator) isFalling(arg interface{}) bool {
+	if len(e.candles) < 2 {
+		return false
+	}
+
+	valCurrent, err := e.resolveValueAt(arg, len(e.candles)-1)
+	if err != nil {
+		return false
+	}
+
+	valPrev, err := e.resolveValueAt(arg, len(e.candles)-2)
+	if err != nil {
+		return false
+	}
+
+	return valCurrent < valPrev
+}
+
+// resolveValueAt resolves the value of an argument at a specific bar index
+func (e *Evaluator) resolveValueAt(arg interface{}, barIndex int) (float64, error) {
+	if barIndex < 0 || barIndex >= len(e.candles) {
+		return 0, fmt.Errorf("bar index out of range: %d", barIndex)
+	}
+
+	switch v := arg.(type) {
+	case float64:
+		return v, nil
+	case int:
+		return float64(v), nil
+	case string:
+		// For indicator values at previous bars, use prevValues
+		// For current bar (last candle), use current values
+		currentBarIndex := len(e.candles) - 1
+		if barIndex < currentBarIndex {
+			// This is a historical request - use prevValues
+			if val, ok := e.prevValues[v]; ok {
+				return val, nil
+			}
+		} else {
+			// This is current bar - use current values
+			if val, ok := e.values[v]; ok {
+				return val, nil
+			}
+		}
+		// Check if it's a price field
+		candle := e.candles[barIndex]
+		switch v {
+		case "open":
+			return candle.Open, nil
+		case "high":
+			return candle.High, nil
+		case "low":
+			return candle.Low, nil
+		case "close":
+			return candle.Close, nil
+		case "volume":
+			return candle.Volume, nil
+		default:
+			return 0, fmt.Errorf("unknown value reference: %s", v)
+		}
+	default:
+		return 0, fmt.Errorf("cannot resolve value: %v", arg)
+	}
 }

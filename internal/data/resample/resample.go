@@ -12,9 +12,9 @@ func Resample(candles []*market.Candle, tf market.Timeframe) ([]*market.Candle, 
 		return candles, nil
 	}
 
-	// For MVP, only support daily (no resampling needed)
-	// Full implementation would handle 1h, 4h, 1d, etc.
-	if tf == market.Timeframe1d || tf == "" {
+	// For MVP, support 1h and daily without resampling
+	// Full implementation would handle resampling from any timeframe
+	if tf == market.Timeframe1d || tf == market.Timeframe1h || tf == "" {
 		return candles, nil
 	}
 

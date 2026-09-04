@@ -5,7 +5,7 @@ strategy:
 
 data:
   symbol: BTCUSDT
-  timeframe: 4h
+  timeframe: 1h
 
 indicators:
   ema_fast:

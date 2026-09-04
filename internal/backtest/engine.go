@@ -113,7 +113,7 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	brokerInstance := broker.NewBroker(executor)
 
 	// Step 4: Run backtest loop
-	tradeHistory, equityCurve, result, err := runBacktestLoop(
+	tradeHistory, equityCurve, err := runBacktestLoop(
 		candles, evaluator, portfolio, riskManager, executor, brokerInstance, config, strategyAST,
 		positionSizer, stopLossCalc, takeProfitCalc, trailingStopCalc,
 	)
@@ -122,19 +122,18 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	}
 
 	// Step 5: Calculate analytics
-	metrics := calculateMetrics(result)
-
-	// Step 6: Finalize result
-	return &BacktestResult{
+	result := &BacktestResult{
 		Config:       config,
 		Portfolio:    portfolio,
 		TotalTrades:  len(tradeHistory),
 		StartTime:    candles[0].Timestamp,
 		EndTime:      candles[len(candles)-1].Timestamp,
-		Metrics:      metrics,
 		TradeHistory: tradeHistory,
 		EquityCurve:  equityCurve,
-	}, nil
+	}
+	result.Metrics = calculateMetrics(result)
+
+	return result, nil
 }
 
 func loadStrategy(path string) (*ast.Strategy, error) {
@@ -240,7 +239,7 @@ func runBacktestLoop(
 	stopLossCalc *risk.StopLossCalculator,
 	takeProfitCalc *risk.TakeProfitCalculator,
 	trailingStopCalc *risk.TrailingStopCalculator,
-) ([]portfolio.Trade, []EquityPoint, *BacktestResult, error) {
+) ([]portfolio.Trade, []EquityPoint, error) {
 	var trades []portfolio.Trade
 	var equityCurve []EquityPoint
 	state := backtestState{
@@ -299,7 +298,7 @@ func runBacktestLoop(
 						}
 						sl, err := stopLossCalc.Calculate(ord.FilledPrice, slSide, atrValue)
 						if err != nil {
-							return nil, nil, nil, fmt.Errorf("calculate stop loss: %w", err)
+							return nil, nil, fmt.Errorf("calculate stop loss: %w", err)
 						}
 						if sl > 0 {
 							state.stopLoss = &sl
@@ -317,7 +316,7 @@ func runBacktestLoop(
 						}
 						tp, err := takeProfitCalc.Calculate(ord.FilledPrice, tpSide, slPrice)
 						if err != nil {
-							return nil, nil, nil, fmt.Errorf("calculate take profit: %w", err)
+							return nil, nil, fmt.Errorf("calculate take profit: %w", err)
 						}
 						if tp > 0 {
 							state.takeProfit = &tp
@@ -366,7 +365,7 @@ func runBacktestLoop(
 						}
 						sl, err := stopLossCalc.Calculate(ord.FilledPrice, slSide, atrValue)
 						if err != nil {
-							return nil, nil, nil, fmt.Errorf("calculate stop loss: %w", err)
+							return nil, nil, fmt.Errorf("calculate stop loss: %w", err)
 						}
 						if sl > 0 {
 							state.stopLoss = &sl
@@ -384,7 +383,7 @@ func runBacktestLoop(
 						}
 						tp, err := takeProfitCalc.Calculate(ord.FilledPrice, tpSide, slPrice)
 						if err != nil {
-							return nil, nil, nil, fmt.Errorf("calculate take profit: %w", err)
+							return nil, nil, fmt.Errorf("calculate take profit: %w", err)
 						}
 						if tp > 0 {
 							state.takeProfit = &tp
@@ -597,7 +596,7 @@ func runBacktestLoop(
 		})
 	}
 
-	return trades, equityCurve, nil, nil
+	return trades, equityCurve, nil
 }
 
 func calculateDrawdown(portfolioInstance *portfolio.Portfolio) float64 {
