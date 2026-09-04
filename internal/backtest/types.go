@@ -3,6 +3,7 @@ package backtest
 import (
 	"time"
 
+	"github.com/1jehuang/backtest/internal/analytics"
 	"github.com/1jehuang/backtest/internal/market"
 	"github.com/1jehuang/backtest/internal/portfolio"
 )
@@ -25,7 +26,7 @@ type BacktestResult struct {
 	TotalTrades  int
 	StartTime    time.Time
 	EndTime      time.Time
-	Metrics      map[string]float64
+	Metrics      *analytics.Metrics
 	TradeHistory []portfolio.Trade
 	EquityCurve  []EquityPoint
 }

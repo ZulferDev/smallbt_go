@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/1jehuang/backtest/internal/analytics"
 	"github.com/1jehuang/backtest/internal/market"
 	"github.com/1jehuang/backtest/internal/order"
 	"github.com/1jehuang/backtest/internal/portfolio"
@@ -61,14 +62,14 @@ func TestBacktestTypes(t *testing.T) {
 		TotalTrades:  5,
 		StartTime:    time.Now(),
 		EndTime:      time.Now().Add(time.Hour),
-		Metrics:      map[string]float64{"sharpe": 1.5, "win_rate": 0.6},
+		Metrics:      &analytics.Metrics{SharpeRatio: 1.5, WinRate: 0.6},
 		TradeHistory: []portfolio.Trade{},
 		EquityCurve:  []EquityPoint{},
 	}
 
 	assert.Equal(t, 5, result.TotalTrades)
-	assert.Equal(t, 1.5, result.Metrics["sharpe"])
-	assert.Equal(t, 0.6, result.Metrics["win_rate"])
+	assert.Equal(t, 1.5, result.Metrics.SharpeRatio)
+	assert.Equal(t, 0.6, result.Metrics.WinRate)
 
 	// Test EquityPoint
 	ep := EquityPoint{
@@ -105,24 +106,24 @@ func TestBacktestConfigValidation(t *testing.T) {
 
 func TestBacktestResultMetrics(t *testing.T) {
 	result := &BacktestResult{
-		Metrics: map[string]float64{
-			"total_return":  0.85,
-			"cagr":          0.15,
-			"sharpe":        1.67,
-			"sortino":       2.31,
-			"max_drawdown":  -0.21,
-			"win_rate":      0.47,
-			"profit_factor": 1.84,
-			"expectancy":    0.43,
-			"trade_count":   428,
+		Metrics: &analytics.Metrics{
+			TotalReturn:  0.85,
+			CAGR:         0.15,
+			SharpeRatio:  1.67,
+			SortinoRatio: 2.31,
+			MaxDrawdown:  -0.21,
+			WinRate:      0.47,
+			ProfitFactor: 1.84,
+			Expectancy:   0.43,
+			TotalTrades:  428,
 		},
 	}
 
 	// Test metrics access
-	assert.Equal(t, 0.85, result.Metrics["total_return"])
-	assert.Equal(t, 1.67, result.Metrics["sharpe"])
-	assert.Equal(t, -0.21, result.Metrics["max_drawdown"])
-	assert.Equal(t, 428.0, result.Metrics["trade_count"])
+	assert.Equal(t, 0.85, result.Metrics.TotalReturn)
+	assert.Equal(t, 1.67, result.Metrics.SharpeRatio)
+	assert.Equal(t, -0.21, result.Metrics.MaxDrawdown)
+	assert.Equal(t, 428, result.Metrics.TotalTrades)
 }
 
 func TestSimpleTestStrategyEvaluation(t *testing.T) {

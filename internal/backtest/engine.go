@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/1jehuang/backtest/internal/analytics"
 	"github.com/1jehuang/backtest/internal/broker"
 	"github.com/1jehuang/backtest/internal/data/csv"
 	"github.com/1jehuang/backtest/internal/data/parquet"
@@ -605,156 +606,34 @@ func calculateDrawdown(portfolioInstance *portfolio.Portfolio) float64 {
 	return (portfolioInstance.Equity - portfolioInstance.InitialCash) / portfolioInstance.InitialCash
 }
 
-func calculateMetrics(result *BacktestResult) map[string]float64 {
-	metrics := make(map[string]float64)
+func calculateMetrics(result *BacktestResult) *analytics.Metrics {
+	analyzer := analytics.NewAnalyzer()
 
-	if len(result.TradeHistory) == 0 {
-		metrics["total_return"] = 0
-		metrics["cagr"] = 0
-		metrics["sharpe_ratio"] = 0
-		metrics["sortino_ratio"] = 0
-		metrics["max_drawdown"] = 0
-		metrics["win_rate"] = 0
-		metrics["profit_factor"] = 0
-		metrics["expectancy"] = 0
-		metrics["average_trade"] = 0
-		metrics["average_win"] = 0
-		metrics["average_loss"] = 0
-		metrics["win_count"] = 0
-		metrics["loss_count"] = 0
-		return metrics
-	}
-
-	// Total return
-	totalReturn := (result.Portfolio.Equity - result.Portfolio.InitialCash) / result.Portfolio.InitialCash
-	metrics["total_return"] = totalReturn
-
-	// CAGR
-	days := result.EndTime.Sub(result.StartTime).Hours() / 24
-	if days > 0 {
-		metrics["cagr"] = pow(1+totalReturn, 365/days) - 1
-	}
-
-	// Trade statistics
-	var totalWin, totalLoss float64
-	winCount, lossCount := 0, 0
-	for _, trade := range result.TradeHistory {
-		if trade.NetPnL > 0 {
-			totalWin += trade.NetPnL
-			winCount++
-		} else {
-			totalLoss += trade.NetPnL
-			lossCount++
+	// Convert backtest.EquityPoint to analytics.EquityPoint
+	equityCurve := make([]analytics.EquityPoint, len(result.EquityCurve))
+	for i, ep := range result.EquityCurve {
+		equityCurve[i] = analytics.EquityPoint{
+			Timestamp: ep.Timestamp,
+			Equity:    ep.Equity,
+			Cash:      ep.Cash,
+			Drawdown:  ep.Drawdown,
+			Exposure:  ep.Exposure,
 		}
 	}
 
-	metrics["win_count"] = float64(winCount)
-	metrics["loss_count"] = float64(lossCount)
-	metrics["win_rate"] = float64(winCount) / float64(len(result.TradeHistory))
-
-	if winCount > 0 {
-		metrics["average_win"] = totalWin / float64(winCount)
-	}
-	if lossCount > 0 {
-		metrics["average_loss"] = totalLoss / float64(lossCount)
-	}
-	if len(result.TradeHistory) > 0 {
-		metrics["average_trade"] = (totalWin + totalLoss) / float64(len(result.TradeHistory))
+	input := analytics.AnalysisInput{
+		StartTime:    result.StartTime,
+		EndTime:      result.EndTime,
+		InitialCash:  result.Portfolio.InitialCash,
+		FinalEquity:  result.Portfolio.Equity,
+		EquityCurve:  equityCurve,
+		TradeHistory: result.TradeHistory,
 	}
 
-	// Profit factor
-	if totalLoss != 0 {
-		metrics["profit_factor"] = totalWin / -totalLoss
-	} else {
-		metrics["profit_factor"] = totalWin
-	}
-
-	// Expectancy
-	if len(result.TradeHistory) > 0 {
-		var expectancy float64
-		for _, trade := range result.TradeHistory {
-			expectancy += trade.NetPnL
-		}
-		metrics["expectancy"] = expectancy / float64(len(result.TradeHistory))
-	}
-
-	// Max drawdown
-	maxDD := 0.0
-	for _, point := range result.EquityCurve {
-		if point.Drawdown < maxDD {
-			maxDD = point.Drawdown
-		}
-	}
-	metrics["max_drawdown"] = maxDD
-
-	// Sharpe ratio (simplified)
-	if len(result.EquityCurve) > 1 {
-		var returns []float64
-		for i := 1; i < len(result.EquityCurve); i++ {
-			prev := result.EquityCurve[i-1].Equity
-			curr := result.EquityCurve[i].Equity
-			if prev > 0 {
-				returns = append(returns, (curr-prev)/prev)
-			}
-		}
-		metrics["sharpe_ratio"] = calculateSharpe(returns)
-	}
-
-	return metrics
-}
-
-func pow(base, exp float64) float64 {
-	if exp == 0 {
-		return 1
-	}
-	result := base
-	for i := 1; i < int(exp); i++ {
-		result *= base
-	}
-	return result
-}
-
-func calculateSharpe(returns []float64) float64 {
-	if len(returns) == 0 {
-		return 0
-	}
-
-	// Calculate mean
-	var sum float64
-	for _, r := range returns {
-		sum += r
-	}
-	mean := sum / float64(len(returns))
-
-	// Calculate std dev
-	var variance float64
-	for _, r := range returns {
-		diff := r - mean
-		variance += diff * diff
-	}
-	variance /= float64(len(returns))
-	stdDev := sqrt(variance)
-
-	if stdDev == 0 {
-		return 0
-	}
-
-	// Sharpe ratio (assuming 252 trading days, 0 risk-free rate)
-	return mean / stdDev * sqrt(252)
+	return analyzer.Analyze(input)
 }
 
 // absPrice returns absolute value for price calculations
 func absPrice(value float64) float64 {
 	return math.Abs(value)
-}
-
-func sqrt(x float64) float64 {
-	if x < 0 {
-		return 0
-	}
-	result := x
-	for i := 0; i < 10; i++ {
-		result = (result + x/result) / 2
-	}
-	return result
 }
