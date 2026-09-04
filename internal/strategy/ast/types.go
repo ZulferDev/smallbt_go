@@ -1,59 +1,185 @@
 package ast
 
-// NodeType represents the type of AST node.
-type NodeType string
-
-const (
-	NodeTypeStrategy   NodeType = "strategy"
-	NodeTypeIndicator  NodeType = "indicator"
-	NodeTypeExpression NodeType = "expression"
-	NodeTypeCondition  NodeType = "condition"
-	NodeTypeEntry      NodeType = "entry"
-	NodeTypeExit       NodeType = "exit"
-	NodeTypeRisk       NodeType = "risk"
+import (
+	"github.com/1jehuang/backtest/internal/expression"
 )
 
-// Node represents an abstract syntax tree node.
-type Node struct {
-	Type       NodeType
-	Name       string
-	Children   []*Node
-	Properties map[string]interface{}
-	Parent     *Node
+// Strategy represents the complete strategy AST.
+// This is the internal representation after parsing YAML.
+// YAML is just an interface - the engine works with this AST.
+type Strategy struct {
+	Name        string
+	Version     string
+	Description string
+
+	// Data configuration
+	Data DataConfig
+
+	// Indicators keyed by name
+	Indicators map[string]IndicatorDef
+
+	// Entry rules
+	Entry EntryRules
+
+	// Exit rules
+	Exit ExitRules
+
+	// Risk management
+	Risk RiskConfig
+
+	// State definitions (for stateful strategies)
+	State map[string]StateDef
 }
 
-// NewNode creates a new AST node.
-func NewNode(nodeType NodeType, name string) *Node {
-	return &Node{
-		Type:       nodeType,
-		Name:       name,
-		Children:   make([]*Node, 0),
-		Properties: make(map[string]interface{}),
-	}
+// DataConfig defines what data the strategy needs.
+type DataConfig struct {
+	Symbol    string
+	Timeframe string
+
+	// Future: multi-timeframe support
+	// Additional map[string]TimeframeConfig
 }
 
-// AddChild adds a child node.
-func (n *Node) AddChild(child *Node) {
-	child.Parent = n
-	n.Children = append(n.Children, child)
+// IndicatorDef defines an indicator configuration.
+type IndicatorDef struct {
+	Name string
+	Type string
+
+	// Parameters for the indicator
+	Params map[string]interface{}
+
+	// Source field (e.g., "close", "volume")
+	Source string
+
+	// Period if applicable
+	Period int
+
+	// Timeframe (for multi-timeframe indicators)
+	Timeframe string
+
+	// For composite indicators
+	Left  string // reference to another indicator
+	Right string // reference to another indicator
+	Op    string // operation: add, subtract, multiply, divide
 }
 
-// SetProperty sets a node property.
-func (n *Node) SetProperty(key string, value interface{}) {
-	n.Properties[key] = value
+// EntryRules defines entry conditions.
+type EntryRules struct {
+	Long  *Condition
+	Short *Condition
 }
 
-// GetProperty gets a node property.
-func (n *Node) GetProperty(key string) interface{} {
-	return n.Properties[key]
+// ExitRules defines exit conditions.
+type ExitRules struct {
+	Long  *Condition
+	Short *Condition
 }
 
-// StrategyAST represents the complete strategy AST.
-type StrategyAST struct {
-	Root *Node
+// Condition represents a logical condition.
+// It can be a simple condition or a composite (all/any).
+type Condition struct {
+	// Type: "all", "any", "not", "expr", "func"
+	Type string
+
+	// For composite conditions
+	Conditions []*Condition
+
+	// For expression-based conditions
+	Expr expression.Expression
+
+	// For function-based conditions
+	Function string
+	Args     []interface{}
 }
 
-// NewStrategyAST creates a new strategy AST.
-func NewStrategyAST(root *Node) *StrategyAST {
-	return &StrategyAST{Root: root}
+// RiskConfig defines risk management rules.
+type RiskConfig struct {
+	PositionSize PositionSizeConfig
+	StopLoss     *StopLossConfig
+	TakeProfit   *TakeProfitConfig
+	TrailingStop *TrailingStopConfig
+
+	// Portfolio-level risk
+	MaxPositions      int
+	MaxPortfolioRisk  float64
+	MaxDailyLoss      float64
+	MaxDrawdown       float64
+	MaxConcurrentRisk float64
+}
+
+// PositionSizeConfig defines position sizing method.
+type PositionSizeConfig struct {
+	Type  string  // "fixed", "percent_equity", "risk_percent"
+	Value float64 // the amount or percentage
+
+	// For risk-based sizing
+	RiskPercent float64
+}
+
+// StopLossConfig defines stop loss configuration.
+type StopLossConfig struct {
+	Type string // "fixed", "percentage", "atr", "expression"
+
+	// For fixed
+	Price float64
+
+	// For percentage
+	Percentage float64
+
+	// For ATR-based
+	Indicator  string
+	Multiplier float64
+
+	// For expression-based
+	Expr expression.Expression
+}
+
+// TakeProfitConfig defines take profit configuration.
+type TakeProfitConfig struct {
+	Type string // "fixed", "percentage", "risk_reward", "expression"
+
+	// For fixed
+	Price float64
+
+	// For percentage
+	Percentage float64
+
+	// For risk/reward ratio
+	Ratio float64
+
+	// For expression-based
+	Expr expression.Expression
+
+	// Future: multiple targets
+	// Targets []TargetConfig
+}
+
+// TrailingStopConfig defines trailing stop configuration.
+type TrailingStopConfig struct {
+	Type string // "percentage", "atr", "highest_lowest", "expression"
+
+	// For percentage
+	Percentage float64
+
+	// For ATR-based
+	Indicator  string
+	Multiplier float64
+
+	// For expression-based
+	Expr expression.Expression
+}
+
+// StateDef defines a state variable for stateful strategies.
+type StateDef struct {
+	Name    string
+	Type    string      // "bool", "float", "int", "string"
+	Default interface{} // default value
+}
+
+// Rule represents a state transition rule (future feature).
+// When condition is met, set state values or trigger actions.
+type Rule struct {
+	When   *Condition
+	Set    map[string]interface{} // state updates
+	Action string                 // "enter", "exit", etc.
 }
