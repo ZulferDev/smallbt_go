@@ -84,15 +84,16 @@ func TestRiskManagerExposureLimit(t *testing.T) {
 	m := NewManager(config)
 	p := portfolio.NewPortfolio(10000.0)
 
-	// Create position with high exposure
-	p.OpenPosition(market.Symbol("BTCUSDT"), portfolio.PositionSideLong, 50000.0, time.Now())
-	p.Positions[market.Symbol("BTCUSDT")].CurrentPrice = 10000.0 // exposure = 10000
+	// Create position with high exposure (45% of equity = $4500)
+	// Quantity 0.45, Price 10000 = exposure $4500
+	p.OpenPosition(market.Symbol("BTCUSDT"), portfolio.PositionSideLong, 0.45, 10000.0, time.Now())
 
+	// Try to add another position (would exceed 50% exposure limit)
 	req := order.OrderRequest{
 		Symbol:   market.Symbol("ETHUSDT"),
 		Side:     order.OrderSideBuy,
 		Type:     order.OrderTypeMarket,
-		Quantity: 1.0,
+		Quantity: 0.1, // Another $1000 would push total exposure to $5500 (55%)
 	}
 
 	can, msg := m.CanEnterTrade(p, req, time.Now())

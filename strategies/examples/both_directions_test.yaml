@@ -1,0 +1,44 @@
+# Test strategy for both long and short positions
+strategy:
+  name: both_directions_test
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  sma_fast:
+    type: sma
+    source: close
+    period: 3
+
+  sma_slow:
+    type: sma
+    source: close
+    period: 7
+
+entry:
+  long:
+    all:
+      - cross_above: [sma_fast, sma_slow]
+
+  short:
+    all:
+      - cross_below: [sma_fast, sma_slow]
+
+exit:
+  long:
+    any:
+      - cross_below: [sma_fast, sma_slow]
+
+  short:
+    any:
+      - cross_above: [sma_fast, sma_slow]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.3
+
+  max_positions: 1

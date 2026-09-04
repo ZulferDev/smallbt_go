@@ -1,0 +1,36 @@
+# Test strategy specifically for short positions
+strategy:
+  name: short_test
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  sma_fast:
+    type: sma
+    source: close
+    period: 2
+
+  sma_slow:
+    type: sma
+    source: close
+    period: 5
+
+entry:
+  short:
+    all:
+      - cross_below: [sma_fast, sma_slow]
+
+exit:
+  short:
+    any:
+      - cross_above: [sma_fast, sma_slow]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.2
+
+  max_positions: 1

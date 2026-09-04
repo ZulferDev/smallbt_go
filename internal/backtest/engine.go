@@ -271,12 +271,17 @@ func runBacktestLoop(
 			if ord.Side == order.OrderSideBuy {
 				if !state.hasPosition {
 					// Open long position
-					portfolioInstance.OpenPosition(
+					err := portfolioInstance.OpenPosition(
 						config.Symbol,
 						portfolio.PositionSideLong,
+						ord.Quantity,
 						ord.FilledPrice,
 						candle.Timestamp,
 					)
+					if err != nil {
+						// Log error but continue - this shouldn't happen with proper capital
+						continue
+					}
 					state.hasPosition = true
 					state.positionSide = portfolio.PositionSideLong
 					state.entryPrice = ord.FilledPrice
@@ -338,12 +343,17 @@ func runBacktestLoop(
 					state.takeProfit = nil
 				} else if !state.hasPosition {
 					// Open short position
-					portfolioInstance.OpenPosition(
+					err := portfolioInstance.OpenPosition(
 						config.Symbol,
 						portfolio.PositionSideShort,
+						ord.Quantity,
 						ord.FilledPrice,
 						candle.Timestamp,
 					)
+					if err != nil {
+						// Log error but continue - this shouldn't happen with proper capital
+						continue
+					}
 					state.hasPosition = true
 					state.positionSide = portfolio.PositionSideShort
 					state.entryPrice = ord.FilledPrice

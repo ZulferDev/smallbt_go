@@ -10,13 +10,17 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run generate_test_data.go <output.csv>")
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: go run generate_test_data.go <numCandles> <output.csv>")
 		os.Exit(1)
 	}
 
-	outputPath := os.Args[1]
-	numCandles := 500
+	var numCandles int
+	_, err := fmt.Sscanf(os.Args[1], "%d", &numCandles)
+	if err != nil {
+		panic(err)
+	}
+	outputPath := os.Args[2]
 
 	file, err := os.Create(outputPath)
 	if err != nil {

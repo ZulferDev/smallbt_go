@@ -1,6 +1,7 @@
 package portfolio
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/1jehuang/backtest/internal/market"
@@ -100,6 +101,10 @@ func (p *Portfolio) UpdateWithCandle(symbol market.Symbol, close float64, timest
 func (p *Portfolio) RecalculateEquity() {
 	p.Equity = p.Cash
 	for _, pos := range p.Positions {
+		// For long positions: equity includes unrealized PnL
+		// UnrealizedPnL = (currentPrice - entryPrice) * quantity
+		// For short positions: equity includes unrealized PnL
+		// UnrealizedPnL = (entryPrice - currentPrice) * quantity
 		p.Equity += pos.UnrealizedPnL()
 	}
 	p.Balance = p.Equity
@@ -115,16 +120,39 @@ func (p *Portfolio) GetExposure() float64 {
 }
 
 // OpenPosition opens a new position.
-func (p *Portfolio) OpenPosition(symbol market.Symbol, side PositionSide, entryPrice float64, timestamp time.Time) {
+func (p *Portfolio) OpenPosition(symbol market.Symbol, side PositionSide, quantity, entryPrice float64, timestamp time.Time) error {
+	if quantity <= 0 {
+		return fmt.Errorf("quantity must be positive")
+	}
+	if entryPrice <= 0 {
+		return fmt.Errorf("entry price must be positive")
+	}
+
+	// Handle cash for position
+	// Long: deduct cash (pay to buy shares)
+	// Short: add cash (receive proceeds from selling borrowed shares)
+	value := quantity * entryPrice
+	if side == PositionSideLong {
+		if value > p.Cash {
+			return fmt.Errorf("insufficient cash: need %.2f, have %.2f", value, p.Cash)
+		}
+		p.Cash -= value
+	} else {
+		// Short position: receive proceeds from sale
+		p.Cash += value
+	}
+
 	p.Positions[symbol] = &Position{
 		Symbol:       symbol,
 		Side:         side,
-		Quantity:     1,
+		Quantity:     quantity,
 		EntryPrice:   entryPrice,
 		EntryTime:    timestamp,
 		CurrentPrice: entryPrice,
 		CurrentTime:  timestamp,
 	}
+	p.RecalculateEquity()
+	return nil
 }
 
 // ClosePosition closes an open position and returns a completed trade.
@@ -169,8 +197,17 @@ func (p *Portfolio) ClosePosition(symbol market.Symbol, exitPrice float64, times
 		ExitReason: "signal",
 	}
 
-	// Update cash
-	p.Cash += netPnL
+	// Update cash - add back position value plus profit minus fees
+	// When closing long: get back exitPrice * quantity (value of shares sold)
+	// When closing short: return borrowed shares, pay exitPrice * quantity
+	if pos.Side == PositionSideLong {
+		p.Cash += exitPrice * pos.Quantity
+	} else {
+		// Short: we already received entryPrice*qty when opening
+		// Now we pay exitPrice*qty to buy back and return borrowed shares
+		p.Cash -= exitPrice * pos.Quantity
+	}
+	p.Cash -= fees
 	p.TotalFees += fees
 
 	// Remove position

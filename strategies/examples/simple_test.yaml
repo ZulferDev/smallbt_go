@@ -1,0 +1,36 @@
+# Simple test strategy - always enter long on first candle
+strategy:
+  name: simple_test
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  sma_fast:
+    type: sma
+    source: close
+    period: 5
+
+  sma_slow:
+    type: sma
+    source: close
+    period: 10
+
+entry:
+  long:
+    all:
+      - cross_above: [sma_fast, sma_slow]
+
+exit:
+  long:
+    any:
+      - cross_below: [sma_fast, sma_slow]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.5
+
+  max_positions: 1
