@@ -113,3 +113,71 @@ func (p *Portfolio) GetExposure() float64 {
 	}
 	return exposure
 }
+
+// OpenPosition opens a new position.
+func (p *Portfolio) OpenPosition(symbol market.Symbol, side PositionSide, entryPrice float64, timestamp time.Time) {
+	p.Positions[symbol] = &Position{
+		Symbol:       symbol,
+		Side:         side,
+		Quantity:     1,
+		EntryPrice:   entryPrice,
+		EntryTime:    timestamp,
+		CurrentPrice: entryPrice,
+		CurrentTime:  timestamp,
+	}
+}
+
+// ClosePosition closes an open position and returns a completed trade.
+func (p *Portfolio) ClosePosition(symbol market.Symbol, exitPrice float64, timestamp time.Time) *Trade {
+	pos, exists := p.Positions[symbol]
+	if !exists {
+		return nil
+	}
+
+	// Calculate PnL
+	var grossPnL float64
+	if pos.Side == PositionSideLong {
+		grossPnL = (exitPrice - pos.EntryPrice) * pos.Quantity
+	} else {
+		grossPnL = (pos.EntryPrice - exitPrice) * pos.Quantity
+	}
+
+	// Estimate fees (simplified)
+	fees := (pos.EntryPrice*pos.Quantity + exitPrice*pos.Quantity) * 0.0005
+
+	netPnL := grossPnL - fees
+	returnPct := 0.0
+	if pos.EntryPrice > 0 {
+		returnPct = (exitPrice - pos.EntryPrice) / pos.EntryPrice
+		if pos.Side == PositionSideShort {
+			returnPct = -returnPct
+		}
+	}
+
+	trade := &Trade{
+		Symbol:     symbol,
+		Side:       pos.Side,
+		EntryTime:  pos.EntryTime,
+		EntryPrice: pos.EntryPrice,
+		ExitTime:   timestamp,
+		ExitPrice:  exitPrice,
+		Quantity:   pos.Quantity,
+		GrossPnL:   grossPnL,
+		Fees:       fees,
+		NetPnL:     netPnL,
+		Return:     returnPct,
+		ExitReason: "signal",
+	}
+
+	// Update cash
+	p.Cash += netPnL
+	p.TotalFees += fees
+
+	// Remove position
+	delete(p.Positions, symbol)
+
+	// Recalculate equity
+	p.RecalculateEquity()
+
+	return trade
+}

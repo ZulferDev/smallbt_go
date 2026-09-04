@@ -1,7 +1,8 @@
-package data
+package csv
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/1jehuang/backtest/internal/market"
 )
+
+var ErrNoMoreData = errors.New("no more data")
 
 // CSVFeed reads OHLCV data from a CSV file.
 // Expected CSV format: timestamp,open,high,low,close,volume
