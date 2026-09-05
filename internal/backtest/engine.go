@@ -2,6 +2,7 @@ package backtest
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -421,12 +422,12 @@ func runBacktestLoop(
 		}
 
 		// Process signals and submit orders
-		fmt.Printf("[ENGINE] Processing %d signals\n", len(signals))
+
 		for _, sig := range signals {
-			fmt.Printf("[ENGINE] Signal type=%v, price=%.2f\n", sig.Type, sig.Price)
+
 			switch sig.Type {
 			case signal.SignalTypeLongEntry:
-				fmt.Printf("[ENGINE] Long entry signal: hasPosition=%v\n", state.hasPosition)
+
 				if !state.hasPosition {
 					// Calculate position size
 					quantity := 1.0
@@ -470,16 +471,16 @@ func runBacktestLoop(
 						Type:     order.OrderTypeMarket,
 						Quantity: quantity,
 					}
-					fmt.Printf("[ENGINE] About to submit order: quantity=%.2f, price=%.2f\n", quantity, sig.Price)
+
 					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
 					if err != nil {
-						fmt.Printf("[ENGINE] ERROR submitting order: %v\n", err)
+						log.Printf("[ERROR] submitting order: %v\n", err)
 						continue
 					}
 				}
 
 			case signal.SignalTypeShortEntry:
-				fmt.Printf("[ENGINE] Short entry signal: hasPosition=%v\n", state.hasPosition)
+
 				if !state.hasPosition {
 					// Calculate position size
 					quantity := 1.0
@@ -519,7 +520,7 @@ func runBacktestLoop(
 					}
 					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
 					if err != nil {
-						fmt.Printf("[ENGINE] ERROR submitting order: %v\n", err)
+						log.Printf("[ERROR] submitting order: %v\n", err)
 						continue
 					}
 				}
@@ -535,7 +536,7 @@ func runBacktestLoop(
 					}
 					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
 					if err != nil {
-						fmt.Printf("[ENGINE] ERROR submitting order: %v\n", err)
+						log.Printf("[ERROR] submitting order: %v\n", err)
 						continue
 					}
 				}
@@ -551,7 +552,7 @@ func runBacktestLoop(
 					}
 					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
 					if err != nil {
-						fmt.Printf("[ENGINE] ERROR submitting order: %v\n", err)
+						log.Printf("[ERROR] submitting order: %v\n", err)
 						continue
 					}
 				}
