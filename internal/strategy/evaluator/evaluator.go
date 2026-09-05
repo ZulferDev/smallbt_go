@@ -20,6 +20,11 @@ type Evaluator struct {
 	candles       []market.Candle        // Historical candles
 	validityFlags map[string]bool        // Track indicator validity
 	state         map[string]interface{} // Strategy state variables
+	
+	// Optimization: cached indicators (optional)
+	cachedRegistry *indicator.CachedRegistry
+	stateManager   *indicator.StateManager
+	useCached      bool
 }
 
 // NewEvaluator creates a new strategy evaluator.
@@ -31,6 +36,33 @@ func NewEvaluator(strat *ast.Strategy, registry *indicator.Registry, symbol mark
 		values:        make(map[string]float64),
 		prevValues:    make(map[string]float64),
 		validityFlags: make(map[string]bool),
+		context: &indicator.Context{
+			Symbol:          symbol,
+			Timeframe:       timeframe,
+			IndicatorValues: make(map[string]indicator.Value),
+		},
+		candles: make([]market.Candle, 0),
+		state:   make(map[string]interface{}),
+	}
+
+	// Initialize state variables from strategy definition
+	e.initializeState()
+
+	return e
+}
+
+// NewCachedEvaluator creates a new optimized strategy evaluator using cached indicators.
+// This provides O(1) incremental indicator updates instead of O(n) recalculation.
+func NewCachedEvaluator(strat *ast.Strategy, cachedReg *indicator.CachedRegistry, symbol market.Symbol, timeframe market.Timeframe) *Evaluator {
+	e := &Evaluator{
+		strategy:       strat,
+		cachedRegistry: cachedReg,
+		stateManager:   indicator.NewStateManager(),
+		useCached:      true,
+		indicators:     make(map[string]indicator.Indicator),
+		values:         make(map[string]float64),
+		prevValues:     make(map[string]float64),
+		validityFlags:  make(map[string]bool),
 		context: &indicator.Context{
 			Symbol:          symbol,
 			Timeframe:       timeframe,
@@ -59,6 +91,82 @@ func (e *Evaluator) initializeState() {
 
 // Initialize initializes indicators defined in the strategy.
 func (e *Evaluator) Initialize() error {
+	// Use cached path if available
+	if e.useCached && e.cachedRegistry != nil {
+		return e.initializeCached()
+	}
+	
+	// Fallback to stateless path (original behavior)
+	return e.initializeStateless()
+}
+
+// initializeCached initializes indicators using cached registry (optimized path).
+func (e *Evaluator) initializeCached() error {
+	// First pass: create all basic (non-composite) indicators
+	for name, def := range e.strategy.Indicators {
+		if isCompositeIndicator(def.Type) {
+			continue
+		}
+
+		// Build config from AST fields
+		config := indicator.Config{
+			Type:   def.Type,
+			Period: def.Period,
+			Source: def.Source,
+		}
+
+		// If Period is 0, check Params map
+		if config.Period == 0 && def.Params != nil {
+			if p, ok := def.Params["period"]; ok {
+				switch v := p.(type) {
+				case int:
+					config.Period = v
+				case float64:
+					config.Period = int(v)
+				}
+			}
+		}
+
+		// If Source is empty, check Params map
+		if config.Source == "" && def.Params != nil {
+			if s, ok := def.Params["source"]; ok {
+				if sourceStr, ok := s.(string); ok {
+					config.Source = sourceStr
+				}
+			}
+		}
+
+		// Create cached indicator
+		cachedInd, err := e.cachedRegistry.CreateCached(config)
+		if err != nil {
+			return fmt.Errorf("create cached indicator %s: %w", name, err)
+		}
+
+		// Register with state manager for incremental updates
+		e.stateManager.Register(name, cachedInd)
+		
+		// Also store in indicators map for compatibility
+		e.indicators[name] = cachedInd
+	}
+
+	// Second pass: create composite indicators (not cached yet)
+	for name, def := range e.strategy.Indicators {
+		if !isCompositeIndicator(def.Type) {
+			continue
+		}
+
+		e.indicators[name] = &compositeIndicator{
+			name: name,
+			def:  def,
+			eval: e,
+		}
+	}
+
+	return nil
+}
+
+// initializeStateless initializes indicators using stateless registry (original behavior).
+func (e *Evaluator) initializeStateless() error {
 	// First pass: create all basic indicators
 	for name, def := range e.strategy.Indicators {
 		// Skip composite indicators - they'll be handled after basic indicators are created
@@ -204,6 +312,95 @@ func isCompositeIndicator(indicatorType string) bool {
 
 // UpdateCandle updates the evaluator with a new candle and calculates indicators.
 func (e *Evaluator) UpdateCandle(candle market.Candle) error {
+	// Use cached path if available
+	if e.useCached && e.stateManager != nil {
+		return e.updateCandleCached(candle)
+	}
+	
+	// Fallback to stateless path (original behavior)
+	return e.updateCandleStateless(candle)
+}
+
+// updateCandleCached uses incremental O(1) updates for cached indicators.
+func (e *Evaluator) updateCandleCached(candle market.Candle) error {
+	// Save previous indicator values for cross detection
+	for k, v := range e.values {
+		e.prevValues[k] = v
+	}
+
+	// Get previous candle for incremental updates
+	var prevCandle *market.Candle
+	if len(e.candles) > 0 {
+		prevCandle = &e.candles[len(e.candles)-1]
+	}
+
+	// Add candle to history
+	e.candles = append(e.candles, candle)
+	barIndex := len(e.candles) - 1
+
+	// Update context
+	e.context.Current = candle
+	e.context.Candles = e.candles
+	e.context.BarIndex = barIndex
+
+	// Update all cached indicators incrementally (O(1) per indicator) - THIS IS THE SPEEDUP!
+	err := e.stateManager.Update(candle, prevCandle)
+	if err != nil {
+		return fmt.Errorf("update cached indicators: %w", err)
+	}
+
+	// Copy values from state manager to evaluator
+	for name := range e.strategy.Indicators {
+		if isCompositeIndicator(e.strategy.Indicators[name].Type) {
+			continue // Skip composites, handled separately
+		}
+
+		value := e.stateManager.GetValue(name)
+		e.context.IndicatorValues[name] = value
+		e.validityFlags[name] = value.Valid
+
+		if value.Valid {
+			e.values[name] = value.Value
+		} else {
+			e.values[name] = 0
+		}
+	}
+
+	// Calculate composite indicators (after basic indicators have values)
+	compositeNames := make([]string, 0)
+	for name := range e.indicators {
+		if _, isComposite := e.indicators[name].(*compositeIndicator); isComposite {
+			compositeNames = append(compositeNames, name)
+		}
+	}
+
+	sortedCompositeNames, err := e.topologicalSortCompositeIndicators(compositeNames)
+	if err != nil {
+		return fmt.Errorf("sort composite indicators: %w", err)
+	}
+
+	for _, name := range sortedCompositeNames {
+		ind := e.indicators[name]
+		value, err := ind.Calculate(e.context)
+		if err != nil {
+			return fmt.Errorf("calculate composite indicator %s: %w", name, err)
+		}
+
+		e.context.IndicatorValues[name] = value
+		e.validityFlags[name] = value.Valid
+
+		if value.Valid {
+			e.values[name] = value.Value
+		} else {
+			e.values[name] = 0
+		}
+	}
+
+	return nil
+}
+
+// updateCandleStateless uses original O(n) recalculation (backward compatibility).
+func (e *Evaluator) updateCandleStateless(candle market.Candle) error {
 	// Add candle to history first to get correct barIndex
 	e.candles = append(e.candles, candle)
 	barIndex := len(e.candles) - 1

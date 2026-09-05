@@ -52,11 +52,10 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	}
 
 	// Step 3: Initialize components
-	registry := indicator.NewRegistry()
-	registry = indicator.BuiltinRegistry()
+	cachedRegistry := indicator.BuiltinCachedRegistry()
 
-	// Create strategy evaluator
-	evaluator := evaluator.NewEvaluator(strategyAST, registry, config.Symbol, config.Timeframe)
+	// Create strategy evaluator with cached indicators (optimized)
+	evaluator := evaluator.NewCachedEvaluator(strategyAST, cachedRegistry, config.Symbol, config.Timeframe)
 	if err := evaluator.Initialize(); err != nil {
 		return nil, fmt.Errorf("initialize evaluator: %w", err)
 	}
