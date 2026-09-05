@@ -110,19 +110,17 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	}
 
 	// Override with strategy execution config if provided
-	// ExecutionConfig is a struct (not pointer), so we check for non-empty fields
-	if strategyAST.Execution.EntryOrderType != "" {
-		// ExecutionConfig fields are populated - use them
-		if strategyAST.Execution.SlippageType != "" {
-			execConfig.SlippageType = strategyAST.Execution.SlippageType
-			execConfig.SlippageValue = strategyAST.Execution.SlippageValue
+	if strategyAST.Execution != nil {
+		if strategyAST.Execution.Slippage != nil {
+			execConfig.SlippageType = strategyAST.Execution.Slippage.Type
+			execConfig.SlippageValue = strategyAST.Execution.Slippage.Value
 		}
-		if strategyAST.Execution.FeeMaker > 0 || strategyAST.Execution.FeeTaker > 0 {
-			execConfig.FeeMaker = strategyAST.Execution.FeeMaker
-			execConfig.FeeTaker = strategyAST.Execution.FeeTaker
+		if strategyAST.Execution.Fees != nil {
+			execConfig.FeeMaker = strategyAST.Execution.Fees.Maker
+			execConfig.FeeTaker = strategyAST.Execution.Fees.Taker
 		}
-		if strategyAST.Execution.Spread > 0 {
-			execConfig.Spread = strategyAST.Execution.Spread
+		if strategyAST.Execution.Spread != nil {
+			execConfig.Spread = *strategyAST.Execution.Spread
 		}
 		if strategyAST.Execution.IntrabarPolicy != "" {
 			execConfig.IntrabarPolicy = strategyAST.Execution.IntrabarPolicy
@@ -487,7 +485,7 @@ func runBacktestLoop(
 
 					// Submit order based on entry type from execution config
 					entryOrderType := "market"
-					if strategyAST.Execution.EntryOrderType != "" {
+					if strategyAST.Execution != nil && strategyAST.Execution.EntryOrderType != "" {
 						entryOrderType = strategyAST.Execution.EntryOrderType
 					}
 					req := createOrderRequest(
@@ -708,18 +706,14 @@ func createOrderRequest(
 	switch orderType {
 	case "limit":
 		req.Type = order.OrderTypeLimit
-		priceVal := price
-		req.Price = &priceVal
+		req.Price = price
 	case "stop":
 		req.Type = order.OrderTypeStop
-		stopPrice := price
-		req.StopPrice = &stopPrice
+		req.StopPrice = price
 	case "stop_limit":
 		req.Type = order.OrderTypeStopLimit
-		priceVal := price
-		stopPrice := price
-		req.Price = &priceVal
-		req.StopPrice = &stopPrice
+		req.Price = price
+		req.StopPrice = price
 	default: // "market"
 		req.Type = order.OrderTypeMarket
 	}

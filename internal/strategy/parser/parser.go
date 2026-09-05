@@ -76,6 +76,11 @@ func (p *Parser) Parse(data []byte) (*ast.Strategy, error) {
 		}
 	}
 
+	// Parse execution config
+	if err := p.parseExecutionConfig(yamlStrat.Execution, strategy); err != nil {
+		return nil, fmt.Errorf("parse execution config: %w", err)
+	}
+
 	return strategy, nil
 }
 
@@ -313,6 +318,50 @@ func (p *Parser) parseArgs(args interface{}) ([]interface{}, error) {
 	default:
 		return nil, fmt.Errorf("invalid args type: %T", args)
 	}
+}
+
+// parseExecutionConfig parses execution configuration.
+func (p *Parser) parseExecutionConfig(config YAMLExecutionConfig, strategy *ast.Strategy) error {
+	strategy.Execution.EntryOrderType = "market"
+	if config.EntryOrderType != "" {
+		strategy.Execution.EntryOrderType = config.EntryOrderType
+	}
+
+	strategy.Execution.ExitOrderType = "market"
+	if config.ExitOrderType != "" {
+		strategy.Execution.ExitOrderType = config.ExitOrderType
+	}
+
+	strategy.Execution.SlippageType = "percentage"
+	if config.SlippageType != "" {
+		strategy.Execution.SlippageType = config.SlippageType
+	}
+	strategy.Execution.SlippageValue = 0.0005 // 0.05% default
+	if config.SlippageValue != 0 {
+		strategy.Execution.SlippageValue = config.SlippageValue
+	}
+
+	strategy.Execution.FeeMaker = 0.0002 // 0.02% default
+	if config.FeeMaker != 0 {
+		strategy.Execution.FeeMaker = config.FeeMaker
+	}
+
+	strategy.Execution.FeeTaker = 0.0005 // 0.05% default
+	if config.FeeTaker != 0 {
+		strategy.Execution.FeeTaker = config.FeeTaker
+	}
+
+	strategy.Execution.Spread = 0.0001 // 0.01% default
+	if config.Spread != 0 {
+		strategy.Execution.Spread = config.Spread
+	}
+
+	strategy.Execution.IntrabarPolicy = "conservative"
+	if config.IntrabarPolicy != "" {
+		strategy.Execution.IntrabarPolicy = config.IntrabarPolicy
+	}
+
+	return nil
 }
 
 // parseRiskConfig parses risk management configuration.

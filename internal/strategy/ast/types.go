@@ -27,6 +27,9 @@ type Strategy struct {
 	// Risk management
 	Risk RiskConfig
 
+	// Execution configuration
+	Execution ExecutionConfig
+
 	// State definitions (for stateful strategies)
 	State map[string]StateDef
 }
@@ -90,6 +93,29 @@ type Condition struct {
 	// For function-based conditions
 	Function string
 	Args     []interface{}
+}
+
+// ExecutionConfig defines execution behavior and order types.
+type ExecutionConfig struct {
+	// Entry order type: "market", "limit", "stop", "stop_limit"
+	EntryOrderType string
+
+	// Exit order type for stop loss and take profit
+	ExitOrderType string
+
+	// Slippage configuration
+	SlippageType  string  // "percentage", "fixed", "none"
+	SlippageValue float64 // percentage (0.0005 = 0.05%) or fixed amount
+
+	// Fees configuration
+	FeeMaker float64 // maker fee percentage
+	FeeTaker float64 // taker fee percentage
+
+	// Spread configuration (average bid-ask spread)
+	Spread float64
+
+	// Intrabar policy for order execution
+	IntrabarPolicy string // "conservative", "optimistic", "nearest"
 }
 
 // RiskConfig defines risk management rules.

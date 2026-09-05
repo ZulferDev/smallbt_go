@@ -23,6 +23,16 @@ exit:
     all:
       - lt: [close, ema9]
 
+execution:
+  entry_order_type: limit
+  exit_order_type: market
+  slippage_type: percentage
+  slippage_value: 0.0005
+  fee_maker: 0.0002
+  fee_taker: 0.0005
+  spread: 0.0001
+  intrabar_policy: conservative
+
 risk:
   position_size:
     type: percent_equity
