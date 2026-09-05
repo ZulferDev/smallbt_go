@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,10 +12,13 @@ import (
 	"time"
 
 	"github.com/ZulferDev/smallbt_go/internal/backtest"
+	"github.com/ZulferDev/smallbt_go/internal/broker"
 	"github.com/ZulferDev/smallbt_go/internal/data/csv"
+	"github.com/ZulferDev/smallbt_go/internal/execution"
 	"github.com/ZulferDev/smallbt_go/internal/market"
 	"github.com/ZulferDev/smallbt_go/internal/montecarlo"
 	"github.com/ZulferDev/smallbt_go/internal/optimization"
+	"github.com/ZulferDev/smallbt_go/internal/portfolio"
 	"github.com/ZulferDev/smallbt_go/internal/strategy/parser"
 	"github.com/ZulferDev/smallbt_go/internal/walkforward"
 )
@@ -44,6 +48,8 @@ func run() error {
 		return runWalkforward(os.Args[2:])
 	case "montecarlo":
 		return runMonteCarlo(os.Args[2:])
+	case "paper":
+		return runPaper(os.Args[2:])
 	case "report":
 		return runReport(os.Args[2:])
 	case "-h", "--help", "help":
@@ -66,6 +72,7 @@ COMMANDS:
   optimize      Optimize strategy parameters
   walkforward   Run Walk Forward Analysis
   montecarlo    Run Monte Carlo Simulation
+  paper         Run paper trading with simulated real-time data
   report        Generate reports from backtest results
 
 FLAGS:
@@ -75,6 +82,7 @@ FLAGS:
 EXAMPLES:
   trader validate strategy.yaml
   trader backtest --strategy strategy.yaml --data data.csv
+  trader paper --strategy strategy.yaml --symbol BTCUSDT --price 50000
   trader montecarlo --result backtest_result.json --simulations 10000`)
 }
 
@@ -776,5 +784,116 @@ func runMonteCarlo(args []string) error {
 
 func runReport(args []string) error {
 	fmt.Println("Report generation not yet implemented")
+	return nil
+}
+
+func runPaper(args []string) error {
+	fs := flag.NewFlagSet("paper", flag.ExitOnError)
+	strategyPath := fs.String("strategy", "", "Path to strategy YAML file")
+	symbol := fs.String("symbol", "BTCUSDT", "Symbol to trade")
+	initialPrice := fs.Float64("price", 50000.0, "Initial price")
+	initialBalance := fs.Float64("balance", 10000.0, "Initial balance")
+	duration := fs.Int("duration", 60, "Duration in seconds")
+	
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("parse flags: %w", err)
+	}
+
+	// Load and validate strategy
+	if *strategyPath == "" {
+		return fmt.Errorf("strategy file required (--strategy)")
+	}
+
+	strategyData, err := os.ReadFile(*strategyPath)
+	if err != nil {
+		return fmt.Errorf("read strategy file: %w", err)
+	}
+
+	p := parser.NewParser()
+	strategy, err := p.Parse(strategyData)
+	if err != nil {
+		return fmt.Errorf("parse strategy: %w", err)
+	}
+
+	fmt.Printf("Starting paper trading...\n")
+	fmt.Printf("Strategy: %s\n", strategy.Name)
+	fmt.Printf("Symbol: %s\n", *symbol)
+	fmt.Printf("Initial Price: %.2f\n", *initialPrice)
+	fmt.Printf("Initial Balance: %.2f\n", *initialBalance)
+	fmt.Printf("Duration: %d seconds\n", *duration)
+	fmt.Printf("\nPress Ctrl+C to stop\n\n")
+
+	// Create paper broker
+	executor := execution.NewSimpleExecutor(execution.Config{})
+	port := portfolio.NewPortfolio(*initialBalance)
+	broker := broker.NewPaperBroker(executor, port, broker.DefaultLatencyConfig())
+	defer broker.Close()
+
+	// Set initial price
+	broker.UpdatePrice(*symbol, *initialPrice)
+
+	// Simple price simulation: static price for MVP
+	// TODO: Add price feed with random walk or live data
+	
+	startTime := time.Now()
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			elapsed := time.Since(startTime).Seconds()
+			if elapsed >= float64(*duration) {
+				fmt.Println("\nPaper trading session complete")
+				return printPaperSummary(broker)
+			}
+
+			// Print status
+			ctx := context.Background()
+			positions, _ := broker.GetPositions(ctx)
+			balance, _ := broker.GetBalance(ctx)
+
+			fmt.Printf("[%.0fs] Balance: %.2f | Equity: %.2f | Positions: %d\n",
+				elapsed, balance.Cash, balance.Equity, len(positions))
+
+			for _, pos := range positions {
+				pnl := pos.UnrealizedPnL()
+				fmt.Printf("  %s: %.4f @ %.2f (PnL: %.2f)\n",
+					pos.Symbol, pos.Quantity, pos.EntryPrice, pnl)
+			}
+		}
+	}
+}
+
+func printPaperSummary(broker *broker.PaperBroker) error {
+	ctx := context.Background()
+	
+	positions, err := broker.GetPositions(ctx)
+	if err != nil {
+		return fmt.Errorf("get positions: %w", err)
+	}
+
+	balance, err := broker.GetBalance(ctx)
+	if err != nil {
+		return fmt.Errorf("get balance: %w", err)
+	}
+
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println("PAPER TRADING SUMMARY")
+	fmt.Println(strings.Repeat("=", 50))
+	fmt.Printf("\nFinal Balance: %.2f\n", balance.Cash)
+	fmt.Printf("Final Equity:  %.2f\n", balance.Equity)
+	fmt.Printf("Positions:     %d\n", len(positions))
+
+	if len(positions) > 0 {
+		fmt.Println("\nOpen Positions:")
+		for _, pos := range positions {
+			pnl := pos.UnrealizedPnL()
+			fmt.Printf("  %s: %.4f @ %.2f (Unrealized PnL: %.2f)\n",
+				pos.Symbol, pos.Quantity, pos.EntryPrice, pnl)
+		}
+	}
+
+	fmt.Println()
 	return nil
 }
