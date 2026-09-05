@@ -18,7 +18,8 @@
 7. [Execution Layer](#execution-layer)
 8. [Portfolio Layer](#portfolio-layer)
 9. [Analytics Layer](#analytics-layer)
-10. [Future Architecture](#future-architecture)
+10. [Paper Trading Layer](#paper-trading-layer)
+11. [Future Architecture](#future-architecture)
 
 ---
 
@@ -604,6 +605,266 @@ func (m *Manager) ValidateTrade(
 - Maximum drawdown
 
 ---
+
+
+---
+
+## Paper Trading Layer
+
+**Status:** ✅ Implemented (Phase 16 Week 2)
+
+Paper trading provides realistic order lifecycle simulation with latency, allowing strategy validation before live deployment.
+
+### Architecture
+
+```
+User/CLI                 PaperBroker              OrderQueue
+    │                         │                       │
+    ├─ Submit Order ──────────>                       │
+    │                         ├─ Create Order         │
+    │                         ├─ Add to Queue ────────>
+    │                         │                       │
+    │                    [Background Thread]          │
+    │                    (100ms ticker)               │
+    │                         │                       │
+    │                    Check Queue ◄────────────────┤
+    │                         │                       │
+    │                    Accept Orders                │
+    │                    (after latency)              │
+    │                         │                       │
+    │                    Fill Orders                  │
+    │                    (against price)              │
+    │                         │                       │
+    │                    Update Portfolio             │
+    │                         │                       │
+    ├─ Get Positions ◄────────┤                       │
+    ├─ Get Balance ◄──────────┤                       │
+```
+
+### PaperBroker
+
+**File:** `internal/broker/paper.go`
+
+```go
+type PaperBroker struct {
+    orderManager *order.OrderManager
+    executor     *execution.SimpleExecutor
+    portfolio    *portfolio.Portfolio
+    
+    // Paper-specific
+    orderQueue  *OrderQueue
+    latencySim  *LatencySimulator
+    lastPrices  map[string]float64
+    
+    // Background processing
+    ticker      *time.Ticker
+    stopCh      chan struct{}
+    stoppedCh   chan struct{}
+    wg          sync.WaitGroup
+}
+```
+
+**Key Features:**
+
+1. **Realistic Latency Simulation**
+   - Configurable 50-200ms order acceptance delay
+   - Simulates exchange processing time
+   - Deterministic for testing (seed-based)
+
+2. **Order Lifecycle**
+   ```
+   Submit → Pending → Accepted → Filled
+                   ↓
+               Cancelled
+   ```
+
+3. **Background Processing**
+   - 100ms ticker processes queue automatically
+   - Orders accepted after latency period
+   - Fills attempted against current price
+   - Portfolio updated on fills
+
+4. **Position Accumulation**
+   - Multiple buys accumulate with weighted average
+   - Example: Buy 0.01 @ 50000 + Buy 0.01 @ 51000 = 0.02 @ 50500
+   - Side validation prevents long+short conflicts
+
+### OrderQueue
+
+**File:** `internal/broker/queue.go`
+
+Manages order lifecycle with time-based processing:
+
+```go
+type OrderQueue struct {
+    orders map[string]*QueuedOrder
+    mu     sync.Mutex
+}
+
+type QueuedOrder struct {
+    Order      *order.Order
+    SubmitTime time.Time
+    AcceptTime time.Time  // SubmitTime + latency
+    Status     string     // "pending", "accepted", "filled", "cancelled"
+}
+```
+
+**Methods:**
+- `Add()` - Add order to queue
+- `GetPendingOrders(now)` - Get orders ready to accept
+- `GetAcceptedOrders()` - Get orders ready to fill
+- `UpdateStatus()` - Update order status
+- `Remove()` - Remove filled/cancelled order
+
+### LatencySimulator
+
+**File:** `internal/broker/paper.go`
+
+Simulates realistic order processing delays:
+
+```go
+type LatencyConfig struct {
+    MinLatency time.Duration  // Default: 50ms
+    MaxLatency time.Duration  // Default: 200ms
+    Seed       int64          // For deterministic testing
+}
+
+func (ls *LatencySimulator) SimulateOrderAcceptance(submitTime time.Time) time.Time
+```
+
+**Behavior:**
+- Random latency between min/max
+- Deterministic when seed provided
+- Fixed latency when min == max (testing)
+
+### CLI Usage
+
+**Command:**
+```bash
+trader paper --strategy <file> [options]
+```
+
+**Options:**
+```
+--symbol BTCUSDT    Symbol to trade (default: BTCUSDT)
+--price 50000       Initial price (default: 50000)
+--balance 10000     Initial balance (default: 10000)
+--duration 60       Duration in seconds (default: 60)
+```
+
+**Example:**
+```bash
+$ trader paper --strategy strategy.yaml --symbol BTCUSDT --price 50000 --duration 30
+
+Starting paper trading...
+Strategy: EMA Cross Strategy
+Symbol: BTCUSDT
+Initial Price: 50000.00
+Initial Balance: 10000.00
+Duration: 30 seconds
+
+[5s] Balance: 10000.00 | Equity: 10000.00 | Positions: 0
+[10s] Balance: 9500.00 | Equity: 9520.00 | Positions: 1
+  BTCUSDT: 0.01 @ 50000.00 (PnL: 20.00)
+
+Paper trading session complete
+
+Final Balance: 9500.00
+Final Equity:  9550.00
+Positions:     1
+  BTCUSDT: 0.01 @ 50000.00 (Unrealized PnL: 50.00)
+```
+
+### Backtest vs Paper Trading
+
+| Feature | SimulatedBroker (Backtest) | PaperBroker (Paper) |
+|---------|---------------------------|---------------------|
+| Data | Historical | Real-time (simulated) |
+| Time | HistoricalTime | RealTime |
+| Latency | None | 50-200ms |
+| Order Queue | Simple map | Time-based queue |
+| Processing | Manual (engine) | Automatic (background) |
+| Fill Timing | Immediate | After latency + price |
+| Use Case | Strategy backtesting | Live validation |
+
+### Integration with Existing Code
+
+**No Breaking Changes:**
+
+Paper trading integrates seamlessly with existing components:
+
+```go
+// Existing components work as-is
+executor := execution.NewSimpleExecutor(config)
+portfolio := portfolio.NewPortfolio(balance)
+
+// New: PaperBroker wraps them
+broker := broker.NewPaperBroker(executor, portfolio, latencyConfig)
+defer broker.Close()
+
+// Standard Broker interface
+broker.SubmitOrder(ctx, order)
+broker.GetPositions(ctx)
+broker.GetBalance(ctx)
+```
+
+**Broker Interface:**
+```go
+type Broker interface {
+    SubmitOrder(ctx context.Context, o *order.Order) (string, error)
+    CancelOrder(ctx context.Context, orderID string) error
+    GetOrder(ctx context.Context, orderID string) (*order.Order, error)
+    GetPositions(ctx context.Context) ([]*portfolio.Position, error)
+    GetBalance(ctx context.Context) (*portfolio.Balance, error)
+    GetLastPrice(ctx context.Context, symbol string) (float64, error)
+    Close() error
+}
+```
+
+Both `SimulatedBroker` and `PaperBroker` implement this interface.
+
+### Testing
+
+**Test Coverage:**
+- 12 unit tests (PaperBroker, LatencySimulator, OrderQueue)
+- 5 integration tests (full workflows, multi-symbol, concurrent orders)
+- 17/17 tests passing
+
+**Test Files:**
+- `internal/broker/paper_test.go` - Unit tests
+- `internal/broker/integration_test.go` - Integration tests
+
+### Current Limitations
+
+1. **Static Price Feed**
+   - Prices don't change during session
+   - TODO: Add random walk generator or live feed
+
+2. **No Strategy Execution**
+   - Strategy loaded but not evaluated
+   - TODO: Integrate evaluator for signal generation
+
+3. **No Persistence**
+   - Session state not saved
+   - TODO: Add state persistence for resume
+
+### Future Enhancements
+
+1. **Dynamic Price Feeds**
+   - Random walk generator
+   - WebSocket exchange feeds
+   - Historical replay mode
+
+2. **Strategy Integration**
+   - Auto-generate signals from strategy
+   - Auto-submit orders based on conditions
+   - Real-time indicator updates
+
+3. **Advanced Features**
+   - Partial fills
+   - Order book simulation
+   - Market impact modeling
+   - Slippage modeling
 
 ## Future Architecture
 
