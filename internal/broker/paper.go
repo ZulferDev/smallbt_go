@@ -24,6 +24,12 @@ type PaperBroker struct {
 	latencySim  *LatencySimulator
 	lastPrices  map[string]float64
 
+	// Background processing
+	ticker    *time.Ticker
+	stopCh    chan struct{}
+	stoppedCh chan struct{}
+	wg        sync.WaitGroup
+
 	mu     sync.RWMutex
 	closed bool
 }
@@ -50,15 +56,22 @@ func NewPaperBroker(
 	portfolio *portfolio.Portfolio,
 	latencyConfig LatencyConfig,
 ) *PaperBroker {
-	return &PaperBroker{
+	b := &PaperBroker{
 		orderManager: order.NewOrderManager(),
 		executor:     executor,
 		portfolio:    portfolio,
 		orderQueue:   NewOrderQueue(),
 		latencySim:   NewLatencySimulator(latencyConfig),
 		lastPrices:   make(map[string]float64),
+		stopCh:       make(chan struct{}),
+		stoppedCh:    make(chan struct{}),
 		closed:       false,
 	}
+
+	// Start background order processing
+	b.startBackgroundProcessing()
+
+	return b
 }
 
 // SubmitOrder implements Broker interface for paper trading
@@ -164,6 +177,20 @@ func (b *PaperBroker) ProcessOrderQueue(now time.Time) error {
 			continue
 		}
 
+		// Update portfolio with fill
+		if qo.Order.Side == order.OrderSideBuy {
+			_ = b.portfolio.OpenPosition(
+				qo.Order.Symbol,
+				portfolio.PositionSideLong,
+				fill.Quantity,
+				fill.Price,
+				now,
+			)
+		} else if qo.Order.Side == order.OrderSideSell {
+			// For now, assume sell closes position
+			_ = b.portfolio.ClosePosition(qo.Order.Symbol, fill.Price, now)
+		}
+
 		// Update queue status
 		updatedOrder, _ := b.orderManager.GetOrder(qo.Order.ID)
 		if updatedOrder.Status == order.OrderStatusFilled {
@@ -260,12 +287,60 @@ func (b *PaperBroker) GetLastPrice(ctx context.Context, symbol string) (float64,
 	return price, nil
 }
 
+// startBackgroundProcessing starts the background goroutine for order processing
+func (b *PaperBroker) startBackgroundProcessing() {
+	b.ticker = time.NewTicker(100 * time.Millisecond)
+	b.wg.Add(1)
+
+	go func() {
+		defer b.wg.Done()
+		defer close(b.stoppedCh)
+
+		for {
+			select {
+			case <-b.ticker.C:
+				b.processOrderQueueBackground()
+			case <-b.stopCh:
+				return
+			}
+		}
+	}()
+}
+
+// processOrderQueueBackground processes orders in background goroutine
+func (b *PaperBroker) processOrderQueueBackground() {
+	// Check if closed without holding lock for long
+	b.mu.RLock()
+	closed := b.closed
+	b.mu.RUnlock()
+
+	if closed {
+		return
+	}
+
+	// ProcessOrderQueue acquires its own lock
+	_ = b.ProcessOrderQueue(time.Now())
+}
+
 // Close implements Broker interface
 func (b *PaperBroker) Close() error {
 	b.mu.Lock()
-	defer b.mu.Unlock()
-
+	if b.closed {
+		b.mu.Unlock()
+		return ErrBrokerClosed
+	}
 	b.closed = true
+	b.mu.Unlock()
+
+	// Stop background processing
+	if b.ticker != nil {
+		b.ticker.Stop()
+	}
+	close(b.stopCh)
+
+	// Wait for background goroutine to finish
+	b.wg.Wait()
+
 	return nil
 }
 

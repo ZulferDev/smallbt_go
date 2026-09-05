@@ -262,3 +262,150 @@ func TestLatencySimulator_OrderAcceptance(t *testing.T) {
 		t.Errorf("Expected accept time %v, got %v", expectedAcceptTime, acceptTime)
 	}
 }
+
+func TestPaperBroker_BackgroundProcessing(t *testing.T) {
+	// Use short fixed latency for predictable testing
+	config := LatencyConfig{
+		MinLatency: 50 * time.Millisecond,
+		MaxLatency: 50 * time.Millisecond,
+		Seed:       42,
+	}
+
+	executor := execution.NewSimpleExecutor(execution.Config{})
+	port := portfolio.NewPortfolio(10000)
+	broker := NewPaperBroker(executor, port, config)
+	defer broker.Close()
+
+	// Update price so order can fill
+	broker.UpdatePrice("BTCUSDT", 50000.0)
+
+	// Submit order
+	ctx := context.Background()
+	ord := &order.Order{
+		Symbol:   "BTCUSDT",
+		Side:     order.OrderSideBuy,
+		Type:     order.OrderTypeMarket,
+		Quantity: 0.1,
+	}
+
+	orderID, err := broker.SubmitOrder(ctx, ord)
+	if err != nil {
+		t.Fatalf("SubmitOrder failed: %v", err)
+	}
+
+	// Wait for background processing (latency + processing time + buffer)
+	time.Sleep(250 * time.Millisecond)
+
+	// Order should be filled automatically by background goroutine
+	qo, exists := broker.orderQueue.Get(orderID)
+	if !exists {
+		t.Fatal("Order not found")
+	}
+
+	if qo.Status != StatusFilled {
+		t.Errorf("Expected filled, got %s", qo.Status)
+	}
+
+	// Verify position opened
+	positions, err := broker.GetPositions(ctx)
+	if err != nil {
+		t.Fatalf("GetPositions failed: %v", err)
+	}
+
+	if len(positions) != 1 {
+		t.Errorf("Expected 1 position, got %d", len(positions))
+	}
+
+	if positions[0].Quantity != 0.1 {
+		t.Errorf("Expected quantity 0.1, got %.2f", positions[0].Quantity)
+	}
+}
+
+func TestPaperBroker_BackgroundProcessing_MultipleOrders(t *testing.T) {
+	config := LatencyConfig{
+		MinLatency: 50 * time.Millisecond,
+		MaxLatency: 50 * time.Millisecond,
+		Seed:       42,
+	}
+
+	executor := execution.NewSimpleExecutor(execution.Config{})
+	port := portfolio.NewPortfolio(10000)
+	broker := NewPaperBroker(executor, port, config)
+	defer broker.Close()
+
+	broker.UpdatePrice("BTCUSDT", 50000.0)
+	broker.UpdatePrice("ETHUSDT", 3000.0)
+
+	ctx := context.Background()
+
+	// Submit multiple orders
+	orders := []*order.Order{
+		{Symbol: "BTCUSDT", Side: order.OrderSideBuy, Type: order.OrderTypeMarket, Quantity: 0.1},
+		{Symbol: "ETHUSDT", Side: order.OrderSideBuy, Type: order.OrderTypeMarket, Quantity: 1.0},
+		{Symbol: "BTCUSDT", Side: order.OrderSideBuy, Type: order.OrderTypeMarket, Quantity: 0.05},
+	}
+
+	var orderIDs []string
+	for _, ord := range orders {
+		orderID, err := broker.SubmitOrder(ctx, ord)
+		if err != nil {
+			t.Fatalf("SubmitOrder failed: %v", err)
+		}
+		orderIDs = append(orderIDs, orderID)
+	}
+
+	// Wait for all orders to process
+	time.Sleep(250 * time.Millisecond)
+
+	// Verify all orders filled
+	for i, orderID := range orderIDs {
+		qo, exists := broker.orderQueue.Get(orderID)
+		if !exists {
+			t.Errorf("Order %d not found", i)
+			continue
+		}
+
+		if qo.Status != StatusFilled {
+			t.Errorf("Order %d: expected filled, got %s", i, qo.Status)
+		}
+	}
+
+	// Verify positions
+	positions, _ := broker.GetPositions(ctx)
+	if len(positions) != 2 {
+		t.Errorf("Expected 2 positions, got %d", len(positions))
+	}
+}
+
+func TestPaperBroker_Close_StopsBackgroundProcessing(t *testing.T) {
+	config := DefaultLatencyConfig()
+	executor := execution.NewSimpleExecutor(execution.Config{})
+	port := portfolio.NewPortfolio(10000)
+	broker := NewPaperBroker(executor, port, config)
+
+	// Close broker
+	err := broker.Close()
+	if err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	// Try to submit order after close
+	ctx := context.Background()
+	ord := &order.Order{
+		Symbol:   "BTCUSDT",
+		Side:     order.OrderSideBuy,
+		Type:     order.OrderTypeMarket,
+		Quantity: 1.0,
+	}
+
+	_, err = broker.SubmitOrder(ctx, ord)
+	if err != ErrBrokerClosed {
+		t.Errorf("Expected ErrBrokerClosed, got %v", err)
+	}
+
+	// Close again should return error
+	err = broker.Close()
+	if err != ErrBrokerClosed {
+		t.Errorf("Second close: expected ErrBrokerClosed, got %v", err)
+	}
+}
