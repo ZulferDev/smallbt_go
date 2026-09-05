@@ -125,7 +125,7 @@ func (p *Portfolio) GetExposure() float64 {
 	return exposure
 }
 
-// OpenPosition opens a new position.
+// OpenPosition opens a new position or adds to an existing one.
 func (p *Portfolio) OpenPosition(symbol market.Symbol, side PositionSide, quantity, entryPrice float64, timestamp time.Time) error {
 	if quantity <= 0 {
 		return fmt.Errorf("quantity must be positive")
@@ -148,15 +148,36 @@ func (p *Portfolio) OpenPosition(symbol market.Symbol, side PositionSide, quanti
 		p.Cash += value
 	}
 
-	p.Positions[symbol] = &Position{
-		Symbol:       symbol,
-		Side:         side,
-		Quantity:     quantity,
-		EntryPrice:   entryPrice,
-		EntryTime:    timestamp,
-		CurrentPrice: entryPrice,
-		CurrentTime:  timestamp,
+	// Check if position already exists
+	if existingPos, exists := p.Positions[symbol]; exists {
+		// Verify same side
+		if existingPos.Side != side {
+			return fmt.Errorf("cannot add to position: existing %s position, trying to add %s", existingPos.Side, side)
+		}
+
+		// Calculate new average entry price
+		totalCost := (existingPos.Quantity * existingPos.EntryPrice) + (quantity * entryPrice)
+		newQuantity := existingPos.Quantity + quantity
+		newAvgPrice := totalCost / newQuantity
+
+		// Update existing position
+		existingPos.Quantity = newQuantity
+		existingPos.EntryPrice = newAvgPrice
+		existingPos.CurrentPrice = entryPrice
+		existingPos.CurrentTime = timestamp
+	} else {
+		// Create new position
+		p.Positions[symbol] = &Position{
+			Symbol:       symbol,
+			Side:         side,
+			Quantity:     quantity,
+			EntryPrice:   entryPrice,
+			EntryTime:    timestamp,
+			CurrentPrice: entryPrice,
+			CurrentTime:  timestamp,
+		}
 	}
+
 	p.RecalculateEquity()
 	return nil
 }

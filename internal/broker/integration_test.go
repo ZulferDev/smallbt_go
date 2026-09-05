@@ -378,18 +378,16 @@ func TestPaperTrading_ConcurrentOrders(t *testing.T) {
 		t.Errorf("Expected %d filled orders, got %d", orderCount, filledCount)
 	}
 
-	// Verify position (portfolio overwrites on each OpenPosition call)
-	// So we'll only have the last order's quantity
+	// Verify position (now should accumulate correctly)
 	positions, _ := broker.GetPositions(ctx)
 	if len(positions) != 1 {
 		t.Fatalf("Expected 1 position, got %d", len(positions))
 	}
 
-	// Note: Current portfolio implementation overwrites instead of adding
-	// So quantity will be from last fill, not sum of all
-	if positions[0].Quantity <= 0 {
-		t.Errorf("Expected positive quantity, got %.2f", positions[0].Quantity)
+	// Position should be sum of all orders
+	expectedQty := float64(orderCount) * 0.01
+	delta := 0.0001 // Tolerance for floating point comparison
+	if positions[0].Quantity < expectedQty-delta || positions[0].Quantity > expectedQty+delta {
+		t.Errorf("Expected quantity %.4f, got %.4f", expectedQty, positions[0].Quantity)
 	}
-
-	// TODO: Fix portfolio to accumulate positions instead of overwriting
 }
