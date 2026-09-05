@@ -304,11 +304,75 @@ func (f *WebSocketFeed) errorHandler() {
 				f.conn = nil
 			}
 			
-			// Trigger reconnection (placeholder for Day 2)
+			// Trigger reconnection
 			f.setState(StateDisconnected)
-			// TODO: Implement reconnection logic in Day 2
+			f.reconnect()
 		}
 	}
+}
+
+// reconnect attempts to reconnect with exponential backoff.
+func (f *WebSocketFeed) reconnect() {
+	f.setState(StateReconnecting)
+	
+	for f.reconnectAttempt < f.maxReconnects {
+		select {
+		case <-f.ctx.Done():
+			return
+		default:
+		}
+		
+		f.reconnectAttempt++
+		
+		// Calculate exponential backoff delay
+		delay := f.calculateBackoff()
+		
+		time.Sleep(delay)
+		
+		// Attempt reconnection
+		f.stateMu.Lock()
+		if f.state == StateClosed {
+			f.stateMu.Unlock()
+			return
+		}
+		f.state = StateConnecting
+		f.stateMu.Unlock()
+		
+		conn, _, err := websocket.DefaultDialer.Dial(f.url, nil)
+		if err != nil {
+			// Connection failed, continue loop
+			f.setState(StateReconnecting)
+			continue
+		}
+		
+		// Reconnection successful
+		f.conn = conn
+		f.setState(StateConnected)
+		f.reconnectAttempt = 0
+		
+		// Restart background goroutines
+		f.wg.Add(2)
+		go f.readLoop()
+		go f.heartbeatLoop()
+		
+		return
+	}
+	
+	// Max reconnection attempts reached
+	f.setState(StateDisconnected)
+}
+
+// calculateBackoff calculates exponential backoff delay.
+// Formula: min(baseDelay * 2^attempt, maxDelay)
+func (f *WebSocketFeed) calculateBackoff() time.Duration {
+	const maxDelay = 60 * time.Second
+	
+	delay := f.reconnectDelay * time.Duration(1<<uint(f.reconnectAttempt-1))
+	if delay > maxDelay {
+		delay = maxDelay
+	}
+	
+	return delay
 }
 
 // broadcast sends a candle to all subscribers.
