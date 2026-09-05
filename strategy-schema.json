@@ -1,0 +1,457 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Trading Strategy Configuration",
+  "description": "Schema for declarative quantitative trading strategy definition",
+  "type": "object",
+  "required": ["strategy", "data", "indicators", "entry", "risk"],
+  "properties": {
+    "strategy": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Strategy name"
+        },
+        "version": {
+          "type": "string",
+          "description": "Strategy version"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": ["symbol", "timeframe"],
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "Trading symbol (e.g., BTCUSDT)"
+        },
+        "timeframe": {
+          "type": "string",
+          "enum": ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"],
+          "description": "Candle timeframe"
+        },
+        "primary": {
+          "type": "object",
+          "properties": {
+            "timeframe": {"type": "string"}
+          }
+        },
+        "higher": {
+          "type": "object",
+          "properties": {
+            "timeframe": {"type": "string"}
+          }
+        }
+      }
+    },
+    "indicators": {
+      "type": "object",
+      "description": "Indicator definitions",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["sma", "ema", "rsi", "atr", "add", "subtract", "multiply", "divide", "previous", "shift"]
+          },
+          "source": {
+            "type": "string",
+            "enum": ["open", "high", "low", "close", "volume"],
+            "description": "Data source for indicator"
+          },
+          "period": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Lookback period"
+          },
+          "timeframe": {
+            "type": "string",
+            "description": "Optional timeframe override for multi-timeframe analysis"
+          },
+          "left": {
+            "type": "string",
+            "description": "Left operand for arithmetic operators"
+          },
+          "right": {
+            "type": "string",
+            "description": "Right operand for arithmetic operators"
+          },
+          "value": {
+            "type": "string",
+            "description": "Reference value for historical operators"
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of bars to shift"
+          }
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "description": "Entry conditions",
+      "properties": {
+        "long": {
+          "$ref": "#/definitions/condition"
+        },
+        "short": {
+          "$ref": "#/definitions/condition"
+        }
+      }
+    },
+    "exit": {
+      "type": "object",
+      "description": "Exit conditions",
+      "properties": {
+        "long": {
+          "$ref": "#/definitions/condition"
+        },
+        "short": {
+          "$ref": "#/definitions/condition"
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "required": ["position_size"],
+      "properties": {
+        "position_size": {
+          "type": "object",
+          "required": ["type", "value"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["fixed", "percent_equity", "risk_percent"]
+            },
+            "value": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "stop_loss": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["fixed", "atr", "percentage"]
+            },
+            "value": {
+              "type": "number"
+            },
+            "period": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "multiplier": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "take_profit": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["fixed", "risk_reward", "percentage"]
+            },
+            "value": {
+              "type": "number"
+            },
+            "ratio": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "trailing_stop": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["percentage", "atr"]
+            },
+            "value": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "description": "Execution parameters",
+      "properties": {
+        "fees": {
+          "type": "object",
+          "properties": {
+            "maker": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Maker fee (0.0002 = 0.02%)"
+            },
+            "taker": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Taker fee (0.0005 = 0.05%)"
+            }
+          }
+        },
+        "slippage": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["percentage", "fixed"]
+            },
+            "value": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "description": "State variables for stateful strategies",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "default": {
+            "description": "Default value"
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "State transition rules",
+      "items": {
+        "type": "object",
+        "properties": {
+          "when": {
+            "$ref": "#/definitions/condition"
+          },
+          "set": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "action": {
+            "type": "object",
+            "properties": {
+              "enter": {
+                "type": "string",
+                "enum": ["long", "short"]
+              },
+              "exit": {
+                "type": "string",
+                "enum": ["long", "short"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "optimization": {
+      "type": "object",
+      "description": "Parameter optimization configuration",
+      "properties": {
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["range", "step"],
+            "properties": {
+              "range": {
+                "type": "array",
+                "items": {"type": "number"},
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "step": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            }
+          }
+        },
+        "objective": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["sharpe", "sortino", "total_return", "profit_factor", "calmar", "win_rate", "expectancy"]
+            }
+          }
+        }
+      }
+    },
+    "walk_forward": {
+      "type": "object",
+      "description": "Walk Forward Analysis configuration",
+      "properties": {
+        "train": {
+          "type": "object",
+          "required": ["bars"],
+          "properties": {
+            "bars": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "test": {
+          "type": "object",
+          "required": ["bars"],
+          "properties": {
+            "bars": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "step": {
+          "type": "object",
+          "required": ["bars"],
+          "properties": {
+            "bars": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "monte_carlo": {
+      "type": "object",
+      "description": "Monte Carlo simulation configuration",
+      "properties": {
+        "simulations": {
+          "type": "integer",
+          "minimum": 100,
+          "description": "Number of simulations to run"
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed for reproducibility"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["trade_reshuffle", "return_reshuffle", "bootstrap"],
+          "description": "Simulation method"
+        },
+        "confidence_level": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence level (0.95 = 95%)"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "condition": {
+      "type": "object",
+      "description": "Trading condition definition",
+      "properties": {
+        "all": {
+          "type": "array",
+          "description": "AND - all conditions must be true",
+          "items": {"$ref": "#/definitions/condition"}
+        },
+        "any": {
+          "type": "array",
+          "description": "OR - at least one condition must be true",
+          "items": {"$ref": "#/definitions/condition"}
+        },
+        "not": {
+          "$ref": "#/definitions/condition",
+          "description": "NOT - condition must be false"
+        },
+        "gt": {
+          "type": "array",
+          "description": "Greater than",
+          "items": {"type": ["string", "number"]},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "lt": {
+          "type": "array",
+          "description": "Less than",
+          "items": {"type": ["string", "number"]},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "gte": {
+          "type": "array",
+          "description": "Greater than or equal",
+          "items": {"type": ["string", "number"]},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "lte": {
+          "type": "array",
+          "description": "Less than or equal",
+          "items": {"type": ["string", "number"]},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "eq": {
+          "type": "array",
+          "description": "Equal",
+          "items": {"type": ["string", "number", "boolean"]},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "cross_above": {
+          "type": "array",
+          "description": "Value crosses above reference",
+          "items": {"type": "string"},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "cross_below": {
+          "type": "array",
+          "description": "Value crosses below reference",
+          "items": {"type": "string"},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "rising": {
+          "type": "array",
+          "description": "Value is rising",
+          "items": {"type": "string"},
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "falling": {
+          "type": "array",
+          "description": "Value is falling",
+          "items": {"type": "string"},
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "between": {
+          "type": "array",
+          "description": "Value is between min and max",
+          "items": {"type": ["string", "number"]},
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    }
+  }
+}

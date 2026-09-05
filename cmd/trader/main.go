@@ -10,9 +10,12 @@ import (
 	"time"
 
 	"github.com/1jehuang/backtest/internal/backtest"
+	"github.com/1jehuang/backtest/internal/data/csv"
 	"github.com/1jehuang/backtest/internal/market"
+	"github.com/1jehuang/backtest/internal/montecarlo"
 	"github.com/1jehuang/backtest/internal/optimization"
 	"github.com/1jehuang/backtest/internal/strategy/parser"
+	"github.com/1jehuang/backtest/internal/walkforward"
 )
 
 func main() {
@@ -38,6 +41,8 @@ func run() error {
 		return runOptimize(os.Args[2:])
 	case "walkforward":
 		return runWalkforward(os.Args[2:])
+	case "montecarlo":
+		return runMonteCarlo(os.Args[2:])
 	case "report":
 		return runReport(os.Args[2:])
 	case "-h", "--help", "help":
@@ -59,6 +64,7 @@ COMMANDS:
   backtest      Run a backtest with a strategy and data
   optimize      Optimize strategy parameters
   walkforward   Run Walk Forward Analysis
+  montecarlo    Run Monte Carlo Simulation
   report        Generate reports from backtest results
 
 FLAGS:
@@ -68,7 +74,7 @@ FLAGS:
 EXAMPLES:
   trader validate strategy.yaml
   trader backtest --strategy strategy.yaml --data data.csv
-  trader report --result backtest_result.json`)
+  trader montecarlo --result backtest_result.json --simulations 10000`)
 }
 
 func runValidate(args []string) error {
@@ -408,6 +414,14 @@ func runOptimize(args []string) error {
 // parseParameterRanges parses parameter range string.
 // Format: "name1:start1:end1:step1,name2:start2:end2:step2"
 // Example: "indicators.ema_fast.period:5:20:1,indicators.ema_slow.period:20:100:5"
+// min returns the smaller of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func parseParameterRanges(input string) ([]optimization.ParameterRange, error) {
 	var ranges []optimization.ParameterRange
 
@@ -453,7 +467,280 @@ func parseParameterRanges(input string) ([]optimization.ParameterRange, error) {
 }
 
 func runWalkforward(args []string) error {
-	fmt.Println("Walk Forward Analysis not yet implemented")
+	fs := flag.NewFlagSet("walkforward", flag.ExitOnError)
+	strategyPath := fs.String("strategy", "", "Path to strategy YAML file")
+	dataPath := fs.String("data", "", "Path to market data file")
+	symbol := fs.String("symbol", "BTCUSDT", "Trading symbol")
+	initialCash := fs.Float64("cash", 10000, "Initial cash")
+	trainBars := fs.Int("train", 1000, "Number of bars for training period")
+	testBars := fs.Int("test", 200, "Number of bars for testing (out-of-sample) period")
+	stepBars := fs.Int("step", 0, "Number of bars to step forward (0 = step = test)")
+	outputJSON := fs.String("output", "", "Output JSON file path")
+
+	// Parse flags
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("parse flags: %w", err)
+	}
+
+	if *strategyPath == "" {
+		return fmt.Errorf("--strategy flag required")
+	}
+	if *dataPath == "" {
+		return fmt.Errorf("--data flag required")
+	}
+
+	// Parse strategy to get timeframe
+	p := parser.NewParser()
+	strategyAST, err := p.ParseFile(*strategyPath)
+	if err != nil {
+		return fmt.Errorf("parse strategy: %w", err)
+	}
+
+	// Create walk forward config
+	config := walkforward.WindowConfig{
+		TrainBars: *trainBars,
+		TestBars:  *testBars,
+		StepBars:  *stepBars,
+	}
+
+	// Validate config
+	if err := config.Validate(); err != nil {
+		return fmt.Errorf("invalid walk forward config: %w", err)
+	}
+
+	// Load data to determine total bars
+	csvConfig := csv.DefaultCSVConfig(market.Symbol(*symbol), market.Timeframe(strategyAST.Data.Timeframe))
+	csvData, err := csv.NewCSVFeed(*dataPath, csvConfig)
+	if err != nil {
+		return fmt.Errorf("load data: %w", err)
+	}
+
+	// Get total bars
+	totalBars := csvData.Length()
+
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("WALK FORWARD ANALYSIS")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Printf("Strategy:       %s\n", *strategyPath)
+	fmt.Printf("Symbol:         %s\n", *symbol)
+	fmt.Printf("Timeframe:      %s\n", strategyAST.Data.Timeframe)
+	fmt.Printf("Total Bars:     %d\n", totalBars)
+	fmt.Printf("Train Bars:     %d\n", *trainBars)
+	fmt.Printf("Test Bars:      %d\n", *testBars)
+	fmt.Printf("Step Bars:      %d\n", config.StepBars)
+	fmt.Printf("Initial Cash:   $%.2f\n", *initialCash)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// Create WFA instance
+	wfa, err := walkforward.New(config)
+	if err != nil {
+		return fmt.Errorf("create walk forward analysis: %w", err)
+	}
+
+	// Generate windows
+	if err := wfa.GenerateWindows(totalBars); err != nil {
+		return fmt.Errorf("generate windows: %w", err)
+	}
+
+	fmt.Printf("Windows:        %d\n", wfa.WindowCount())
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// For now, we'll just show the configuration
+	if wfa.WindowCount() > 0 {
+		fmt.Println("Window Configuration:")
+		for i := 0; i < min(5, wfa.WindowCount()); i++ {
+			window := wfa.GetWindow(i)
+			if window != nil {
+				fmt.Printf("  Window %d: Train [%d-%d], Test [%d-%d]\n", 
+					window.WindowID, 
+					window.TrainStart, 
+					window.TrainEnd,
+					window.TestStart,
+					window.TestEnd)
+			}
+		}
+		if wfa.WindowCount() > 5 {
+			fmt.Printf("  ... and %d more windows\n", wfa.WindowCount()-5)
+		}
+	}
+
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("🚧 Walk Forward Analysis engine is ready.")
+	fmt.Println("Backtest execution for each window will be implemented next.")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// Export results if requested
+	if *outputJSON != "" {
+		// For now, save basic configuration
+		output := map[string]interface{}{
+			"strategy":       *strategyPath,
+			"symbol":         *symbol,
+			"timeframe":      strategyAST.Data.Timeframe,
+			"total_bars":     totalBars,
+			"train_bars":     *trainBars,
+			"test_bars":      *testBars,
+			"step_bars":      config.StepBars,
+			"window_count":   wfa.WindowCount(),
+			"windows":        wfa.Windows,
+		}
+
+		jsonBytes, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshal JSON: %w", err)
+		}
+
+		if err := os.WriteFile(*outputJSON, jsonBytes, 0644); err != nil {
+			return fmt.Errorf("write output file: %w", err)
+		}
+
+		fmt.Printf("Configuration saved to: %s\n", *outputJSON)
+	}
+
+	return nil
+}
+
+func runMonteCarlo(args []string) error {
+	fs := flag.NewFlagSet("montecarlo", flag.ExitOnError)
+	resultPath := fs.String("result", "", "Path to backtest result JSON file")
+	simulations := fs.Int("simulations", 1000, "Number of Monte Carlo simulations")
+	seed := fs.Int64("seed", 42, "Random seed for reproducibility")
+	outputJSON := fs.String("output", "", "Output JSON file path")
+
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("parse flags: %w", err)
+	}
+
+	if *resultPath == "" {
+		return fmt.Errorf("--result flag required")
+	}
+
+	// Load backtest result
+	resultBytes, err := os.ReadFile(*resultPath)
+	if err != nil {
+		return fmt.Errorf("read result file: %w", err)
+	}
+
+	var result backtest.BacktestResult
+	if err := json.Unmarshal(resultBytes, &result); err != nil {
+		return fmt.Errorf("unmarshal result: %w", err)
+	}
+
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("MONTE CARLO SIMULATION")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Printf("Strategy:     %s\n", result.StrategyName)
+	fmt.Printf("Symbol:       %s\n", result.Config.Symbol)
+	fmt.Printf("Timeframe:    %s\n", result.Config.Timeframe)
+	fmt.Printf("Trades:       %d\n", result.TotalTrades)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Printf("Simulations:  %d\n", *simulations)
+	fmt.Printf("Seed:         %d\n", *seed)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// Convert trades to montecarlo format
+	mcTrades := make([]montecarlo.Trade, len(result.TradeHistory))
+	for i, t := range result.TradeHistory {
+		mcTrades[i] = montecarlo.Trade{
+			ID:         int64(i),
+			EntryTime:  t.EntryTime,
+			ExitTime:   t.ExitTime,
+			EntryPrice: t.EntryPrice,
+			ExitPrice:  t.ExitPrice,
+			Quantity:   t.Quantity,
+			GrossPnL:   t.GrossPnL,
+			Fees:       t.Fees,
+			NetPnL:     t.NetPnL,
+			Return:     t.Return,
+			MAE:        t.MAE,
+			MFE:        t.MFE,
+			Duration:   t.ExitTime.Sub(t.EntryTime),
+		}
+	}
+
+	// Create Monte Carlo runner
+	runner := montecarlo.NewRunner(montecarlo.MCConfig{
+		Simulations: *simulations,
+		Seed:        *seed,
+		Type:        montecarlo.TradeReshuffle,
+	}, mcTrades, result.Config.InitialCash)
+
+	// Run Monte Carlo simulation
+	fmt.Println("\nRunning Monte Carlo simulation...")
+	start := time.Now()
+
+	mcResult, err := runner.Run()
+	if err != nil {
+		return fmt.Errorf("Monte Carlo failed: %w", err)
+	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("Completed in %v\n", elapsed)
+
+	// Display Monte Carlo results
+	fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("MONTE CARLO ANALYSIS RESULTS")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// Get Monte Carlo results
+	stats := mcResult.Statistics
+
+	fmt.Printf("Mean Return:     %+.2f%%\n", stats.MeanReturn*100)
+	fmt.Printf("Std Dev:         %.2f%%\n", stats.StdDevReturn*100)
+	fmt.Printf("Sharpe Ratio:    %.2f\n", stats.MeanSharpe)
+	fmt.Println()
+
+	fmt.Printf("5th Percentile:  %+.2f%%\n", stats.P05Return*100)
+	fmt.Printf("50th Percentile: %+.2f%%\n", stats.MedianReturn*100)
+	fmt.Printf("95th Percentile: %+.2f%%\n", stats.P95Return*100)
+	fmt.Println()
+
+	fmt.Printf("Probability of Loss:   %.2f%%\n", stats.NegativeReturnRatio*100)
+	fmt.Printf("Probability of Gain:   %.2f%%\n", (1-stats.NegativeReturnRatio)*100)
+	fmt.Printf("Probability of Ruin:   %.2f%%\n", stats.ProbabilityOfRuin*100)
+	fmt.Println()
+
+	fmt.Printf("Mean Max Drawdown:     %.2f%%\n", stats.MeanMaxDrawdown*100)
+	fmt.Printf("95th Pctl Drawdown:    %.2f%%\n", stats.P95MaxDrawdown*100)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// Export to JSON if requested
+	if *outputJSON != "" {
+		output := map[string]interface{}{
+			"strategy":             result.StrategyName,
+			"symbol":               result.Config.Symbol,
+			"timeframe":            result.Config.Timeframe,
+			"trades":               result.TotalTrades,
+			"simulations":          *simulations,
+			"seed":                 *seed,
+			"mean_return":          stats.MeanReturn,
+			"std_dev":              stats.StdDevReturn,
+			"mean_sharpe":          stats.MeanSharpe,
+			"percentile_5":         stats.P05Return,
+			"percentile_50":        stats.MedianReturn,
+			"percentile_95":        stats.P95Return,
+			"probability_of_loss":  stats.NegativeReturnRatio,
+			"probability_of_gain":  1 - stats.NegativeReturnRatio,
+			"probability_of_ruin":  stats.ProbabilityOfRuin,
+			"mean_max_drawdown":    stats.MeanMaxDrawdown,
+			"percentile_95_dd":     stats.P95MaxDrawdown,
+			"confidence_interval": []float64{
+				stats.P05Return,
+				stats.P95Return,
+			},
+		}
+
+		jsonBytes, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshal JSON: %w", err)
+		}
+
+		if err := os.WriteFile(*outputJSON, jsonBytes, 0644); err != nil {
+			return fmt.Errorf("write output file: %w", err)
+		}
+
+		fmt.Printf("\nResults saved to: %s\n", *outputJSON)
+	}
+
 	return nil
 }
 
