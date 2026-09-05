@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/1jehuang/backtest/internal/strategy/ast"
@@ -35,11 +34,6 @@ func (p *Parser) Parse(data []byte) (*ast.Strategy, error) {
 	if err := yaml.Unmarshal(data, &yamlStrat); err != nil {
 		return nil, fmt.Errorf("parse YAML: %w", err)
 	}
-
-	log.Printf("[DEBUG PARSE] After YAML unmarshal: Execution.EntryOrderType='%s', Execution.ExitOrderType='%s'\n",
-		yamlStrat.Execution.EntryOrderType, yamlStrat.Execution.ExitOrderType)
-
-	log.Println("[DEBUG PARSE] Parse function CALLED")
 
 	strategy := &ast.Strategy{
 		Name:        yamlStrat.Strategy.Name,
@@ -83,11 +77,9 @@ func (p *Parser) Parse(data []byte) (*ast.Strategy, error) {
 	}
 
 	// Parse execution config
-	log.Printf("[DEBUG PARSE] Before parseExecutionConfig: Execution=%+v\n", yamlStrat.Execution)
 	if err := p.parseExecutionConfig(yamlStrat.Execution, strategy); err != nil {
 		return nil, fmt.Errorf("parse execution config: %w", err)
 	}
-	log.Printf("[DEBUG PARSE] After parseExecutionConfig: EntryOrderType='%s', ExitOrderType='%s'\n", strategy.Execution.EntryOrderType, strategy.Execution.ExitOrderType)
 
 	return strategy, nil
 }
@@ -330,8 +322,6 @@ func (p *Parser) parseArgs(args interface{}) ([]interface{}, error) {
 
 // parseExecutionConfig parses execution configuration.
 func (p *Parser) parseExecutionConfig(config YAMLExecutionConfig, strategy *ast.Strategy) error {
-	log.Printf("[DEBUG PARSER] parseExecutionConfig: EntryOrderType='%s', ExitOrderType='%s', FeeMaker=%f, FeeTaker=%f\n",
-		config.EntryOrderType, config.ExitOrderType, config.FeeMaker, config.FeeTaker)
 	strategy.Execution.EntryOrderType = "market"
 	if config.EntryOrderType != "" {
 		strategy.Execution.EntryOrderType = config.EntryOrderType

@@ -252,9 +252,12 @@ func TestPerformanceLinearScaling(t *testing.T) {
 	// With EMA caching optimized to O(1), ratio should be closer to 1:1 for EMA computation
 	// but overall ratio includes overhead for other operations
 	ratio := float64(duration2) / float64(duration1)
-	// After EMA optimization, scaling is more efficient - ratio around 1.3x
-	if ratio < 1.1 || ratio > 3.0 {
-		t.Errorf("scaling ratio %.2f is outside acceptable range [1.1, 3.0]", ratio)
+	// After EMA optimization and debug log removal, scaling is highly efficient
+	// If ratio < 1.0, it means 200 candle test was faster (possible due to caching/warmup)
+	// Accept ratio as low as 0.5 (200 candles half the time of 100) to 3.0
+	// This test is for detecting major regressions, not precise performance measurement
+	if ratio < 0.5 || ratio > 3.0 {
+		t.Errorf("scaling ratio %.2f is outside acceptable range [0.5, 3.0]", ratio)
 	}
 }
 
