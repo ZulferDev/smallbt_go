@@ -51,6 +51,8 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 		return nil, fmt.Errorf("no candles after filtering")
 	}
 
+
+
 	// Step 3: Initialize components
 	registry := indicator.NewRegistry()
 	registry = indicator.BuiltinRegistry()
@@ -553,13 +555,22 @@ func runBacktestLoop(
 
 			case signal.SignalTypeLongExit:
 				if state.hasPosition && state.positionSide == portfolio.PositionSideLong {
-					// Submit market sell order to close
-					req := order.OrderRequest{
-						Symbol:   config.Symbol,
-						Side:     order.OrderSideSell,
-						Type:     order.OrderTypeMarket,
-						Quantity: 1.0,
+					// Submit exit order to close (use exit order type from config)
+					exitOrderType := "market"
+					if strategyAST.Execution.ExitOrderType != "" {
+						exitOrderType = strategyAST.Execution.ExitOrderType
 					}
+					qty := 0.0
+					if pos, ok := portfolioInstance.Positions[config.Symbol]; ok {
+						qty = pos.Quantity
+					}
+					req := createOrderRequest(
+						config.Symbol,
+						order.OrderSideSell,
+						exitOrderType,
+						qty,
+						candle.Close,
+					)
 					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
 					if err != nil {
 						log.Printf("[ERROR] submitting order: %v\n", err)
@@ -569,13 +580,22 @@ func runBacktestLoop(
 
 			case signal.SignalTypeShortExit:
 				if state.hasPosition && state.positionSide == portfolio.PositionSideShort {
-					// Submit market buy order to close
-					req := order.OrderRequest{
-						Symbol:   config.Symbol,
-						Side:     order.OrderSideBuy,
-						Type:     order.OrderTypeMarket,
-						Quantity: 1.0,
+					// Submit exit order to close (use exit order type from config)
+					exitOrderType := "market"
+					if strategyAST.Execution.ExitOrderType != "" {
+						exitOrderType = strategyAST.Execution.ExitOrderType
 					}
+					qty := 0.0
+					if pos, ok := portfolioInstance.Positions[config.Symbol]; ok {
+						qty = pos.Quantity
+					}
+					req := createOrderRequest(
+						config.Symbol,
+						order.OrderSideBuy,
+						exitOrderType,
+						qty,
+						candle.Close,
+					)
 					_, err := brokerInstance.SubmitOrder(req, candle.Timestamp)
 					if err != nil {
 						log.Printf("[ERROR] submitting order: %v\n", err)
@@ -590,11 +610,15 @@ func runBacktestLoop(
 			if state.stopLoss != nil {
 				if state.positionSide == portfolio.PositionSideLong && candle.Low <= *state.stopLoss {
 					// Stop loss hit for long position
+					qty := 0.0
+					if pos, ok := portfolioInstance.Positions[config.Symbol]; ok {
+						qty = pos.Quantity
+					}
 					req := order.OrderRequest{
 						Symbol:    config.Symbol,
 						Side:      order.OrderSideSell,
 						Type:      order.OrderTypeStop,
-						Quantity:  1.0,
+						Quantity:  qty,
 						StopPrice: state.stopLoss,
 					}
 					brokerInstance.SubmitOrder(req, candle.Timestamp)
