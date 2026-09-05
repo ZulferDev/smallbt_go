@@ -63,6 +63,12 @@ type Trade struct {
 	ExitReason string
 }
 
+// Balance represents account balance information
+type Balance struct {
+	Cash   float64
+	Equity float64
+}
+
 // Portfolio represents the trading account portfolio.
 type Portfolio struct {
 	InitialCash  float64
@@ -217,4 +223,13 @@ func (p *Portfolio) ClosePosition(symbol market.Symbol, exitPrice float64, times
 	p.RecalculateEquity()
 
 	return trade
+}
+
+// GetPositions returns all open positions as a slice
+func (p *Portfolio) GetPositions() []*Position {
+	positions := make([]*Position, 0, len(p.Positions))
+	for _, pos := range p.Positions {
+		positions = append(positions, pos)
+	}
+	return positions
 }
