@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/indicator"
-	"github.com/1jehuang/backtest/internal/market"
-	"github.com/1jehuang/backtest/internal/strategy/ast"
-	"github.com/1jehuang/backtest/internal/strategy/evaluator"
+	"github.com/ZulferDev/smallbt_go/internal/indicator"
+	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/ast"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/evaluator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

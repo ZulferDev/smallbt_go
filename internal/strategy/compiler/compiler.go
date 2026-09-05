@@ -3,7 +3,7 @@ package compiler
 import (
 	"fmt"
 
-	"github.com/1jehuang/backtest/internal/strategy/ast"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/ast"
 )
 
 // Compile compiles a strategy AST into an executable form.

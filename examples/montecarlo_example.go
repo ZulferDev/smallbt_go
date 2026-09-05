@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/montecarlo"
+	"github.com/ZulferDev/smallbt_go/internal/montecarlo"
 )
 
 func main() {

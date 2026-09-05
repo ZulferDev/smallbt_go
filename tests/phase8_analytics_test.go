@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/analytics"
-	"github.com/1jehuang/backtest/internal/backtest"
-	"github.com/1jehuang/backtest/internal/portfolio"
+	"github.com/ZulferDev/smallbt_go/internal/analytics"
+	"github.com/ZulferDev/smallbt_go/internal/backtest"
+	"github.com/ZulferDev/smallbt_go/internal/portfolio"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

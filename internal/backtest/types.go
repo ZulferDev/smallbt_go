@@ -3,9 +3,9 @@ package backtest
 import (
 	"time"
 
-	"github.com/1jehuang/backtest/internal/analytics"
-	"github.com/1jehuang/backtest/internal/market"
-	"github.com/1jehuang/backtest/internal/portfolio"
+	"github.com/ZulferDev/smallbt_go/internal/analytics"
+	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/portfolio"
 )
 
 // BacktestConfig holds configuration for a backtest.

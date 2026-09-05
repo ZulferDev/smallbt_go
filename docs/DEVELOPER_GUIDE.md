@@ -52,7 +52,7 @@ Create `internal/indicator/builtin/my_indicator.go`:
 package builtin
 
 import (
-    "github.com/1jehuang/backtest/internal/indicator"
+    "github.com/ZulferDev/smallbt_go/internal/indicator"
 )
 
 type MyIndicator struct {
@@ -103,7 +103,7 @@ package builtin
 
 import (
     "testing"
-    "github.com/1jehuang/backtest/internal/indicator"
+    "github.com/ZulferDev/smallbt_go/internal/indicator"
 )
 
 func TestMyIndicator(t *testing.T) {

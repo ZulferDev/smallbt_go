@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/order"
-	"github.com/1jehuang/backtest/internal/portfolio"
+	"github.com/ZulferDev/smallbt_go/internal/order"
+	"github.com/ZulferDev/smallbt_go/internal/portfolio"
 )
 
 // Config holds risk management configuration.

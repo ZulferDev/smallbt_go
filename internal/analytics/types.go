@@ -3,7 +3,7 @@ package analytics
 import (
 	"time"
 
-	"github.com/1jehuang/backtest/internal/portfolio"
+	"github.com/ZulferDev/smallbt_go/internal/portfolio"
 )
 
 // Metrics contains all calculated performance metrics.

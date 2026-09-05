@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/execution"
-	"github.com/1jehuang/backtest/internal/market"
-	"github.com/1jehuang/backtest/internal/order"
+	"github.com/ZulferDev/smallbt_go/internal/execution"
+	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/order"
 )
 
 // Broker manages order submission, execution, and lifecycle.

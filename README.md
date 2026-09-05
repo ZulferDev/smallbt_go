@@ -1,7 +1,7 @@
 # Jcode - Declarative Quantitative Trading Backtesting Engine
 
 [![Go Version](https://img.shields.io/badge/go-1.22+-00ADD8?logo=go)](https://golang.org/)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/1jehuang/jcode/ci.yml?branch=main)](https://github.com/1jehuang/jcode/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/ZulferDev/smallbt_go/ci.yml?branch=master)](https://github.com/ZulferDev/smallbt_go/actions)
 [![AGENTS.md Compliant](https://img.shields.io/badge/architecture-AGENTS.md%20compliant-success)](AGENTS.md)
 
 A powerful, extensible, and deterministic quantitative trading research engine where trading strategies are defined **declaratively through YAML** instead of requiring hardcoded Go logic.
@@ -22,7 +22,7 @@ A powerful, extensible, and deterministic quantitative trading research engine w
 
 ```bash
 # Clone repository
-git clone https://github.com/1jehuang/jcode.git
+git clone https://github.com/ZulferDev/smallbt_go.git
 cd jcode
 
 # Build CLI

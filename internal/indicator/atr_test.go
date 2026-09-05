@@ -3,7 +3,7 @@ package indicator
 import (
 	"testing"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 	"github.com/stretchr/testify/assert"
 )
 

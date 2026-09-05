@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 var ErrNoMoreData = errors.New("no more data")

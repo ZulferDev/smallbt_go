@@ -5,7 +5,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/1jehuang/backtest/internal/backtest"
+	"github.com/ZulferDev/smallbt_go/internal/backtest"
 )
 
 // GridSearch implements grid search optimization algorithm.

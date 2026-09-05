@@ -1,4 +1,4 @@
-module github.com/1jehuang/backtest
+module github.com/ZulferDev/smallbt_go
 
 go 1.24.4
 

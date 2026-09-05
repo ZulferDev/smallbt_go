@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/1jehuang/backtest/internal/market"
-	"github.com/1jehuang/backtest/internal/order"
+	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/order"
 )
 
 // Config holds execution configuration.

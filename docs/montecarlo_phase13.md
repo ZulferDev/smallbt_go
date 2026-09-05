@@ -128,7 +128,7 @@ $ go test ./internal/montecarlo/... -v
 === RUN   TestIntegration_LargeDataset
 --- PASS: TestIntegration_LargeDataset (0.35s)
 PASS
-ok      github.com/1jehuang/backtest/internal/montecarlo    0.449s
+ok      github.com/ZulferDev/smallbt_go/internal/montecarlo    0.449s
 ```
 
 ### ✅ Integration Tests Validate

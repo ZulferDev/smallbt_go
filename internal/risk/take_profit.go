@@ -3,7 +3,7 @@ package risk
 import (
 	"fmt"
 
-	"github.com/1jehuang/backtest/internal/strategy/ast"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/ast"
 )
 
 // TakeProfitCalculator calculates take profit price based on configuration.

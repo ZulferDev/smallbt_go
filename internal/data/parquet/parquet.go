@@ -3,7 +3,7 @@ package parquet
 import (
 	"fmt"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 // Reader reads market data from Parquet files.

@@ -1,7 +1,7 @@
 package expression
 
 import (
-	"github.com/1jehuang/backtest/internal/indicator"
+	"github.com/ZulferDev/smallbt_go/internal/indicator"
 )
 
 // Expression represents a node in the expression AST.

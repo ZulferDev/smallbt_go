@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/montecarlo"
+	"github.com/ZulferDev/smallbt_go/internal/montecarlo"
 )
 
 // TestMonteCarloIntegration tests the complete Monte Carlo workflow

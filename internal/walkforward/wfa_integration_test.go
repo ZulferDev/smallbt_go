@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 	
-	"github.com/1jehuang/backtest/internal/backtest"
-	"github.com/1jehuang/backtest/internal/analytics"
+	"github.com/ZulferDev/smallbt_go/internal/backtest"
+	"github.com/ZulferDev/smallbt_go/internal/analytics"
 )
 
 func TestWalkForwardIntegration(t *testing.T) {

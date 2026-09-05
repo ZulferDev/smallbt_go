@@ -1,8 +1,8 @@
 package optimization
 
 import (
-	"github.com/1jehuang/backtest/internal/backtest"
-	"github.com/1jehuang/backtest/internal/strategy/ast"
+	"github.com/ZulferDev/smallbt_go/internal/backtest"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/ast"
 )
 
 // ParameterRange defines the range for a parameter to optimize.

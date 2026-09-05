@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 func TestNewCSVFeed(t *testing.T) {

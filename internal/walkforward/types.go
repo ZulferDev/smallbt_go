@@ -3,7 +3,7 @@ package walkforward
 import (
 	"time"
 
-	"github.com/1jehuang/backtest/internal/backtest"
+	"github.com/ZulferDev/smallbt_go/internal/backtest"
 )
 
 // WindowConfig defines training and testing window sizes.

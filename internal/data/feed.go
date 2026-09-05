@@ -3,7 +3,7 @@ package data
 import (
 	"fmt"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 // ErrNoMoreData is returned when the data feed has no more data to provide.

@@ -3,8 +3,8 @@ package risk
 import (
 	"fmt"
 
-	"github.com/1jehuang/backtest/internal/portfolio"
-	"github.com/1jehuang/backtest/internal/strategy/ast"
+	"github.com/ZulferDev/smallbt_go/internal/portfolio"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/ast"
 )
 
 // PositionSizer calculates position size based on risk configuration.

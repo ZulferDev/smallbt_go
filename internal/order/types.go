@@ -3,7 +3,7 @@ package order
 import (
 	"time"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 // OrderType represents the type of an order.

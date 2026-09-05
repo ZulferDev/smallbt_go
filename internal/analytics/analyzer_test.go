@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/portfolio"
+	"github.com/ZulferDev/smallbt_go/internal/portfolio"
 )
 
 func TestAnalyzerEmptyTrades(t *testing.T) {

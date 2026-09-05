@@ -260,7 +260,7 @@ jcode/
 ### Building
 
 ```bash
-git clone https://github.com/1jehuang/jcode.git
+git clone https://github.com/ZulferDev/smallbt_go.git
 cd jcode
 go build -o ./bin/trader ./cmd/trader
 ```

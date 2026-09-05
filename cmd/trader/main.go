@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/backtest"
-	"github.com/1jehuang/backtest/internal/data/csv"
-	"github.com/1jehuang/backtest/internal/market"
-	"github.com/1jehuang/backtest/internal/montecarlo"
-	"github.com/1jehuang/backtest/internal/optimization"
-	"github.com/1jehuang/backtest/internal/strategy/parser"
-	"github.com/1jehuang/backtest/internal/walkforward"
+	"github.com/ZulferDev/smallbt_go/internal/backtest"
+	"github.com/ZulferDev/smallbt_go/internal/data/csv"
+	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/montecarlo"
+	"github.com/ZulferDev/smallbt_go/internal/optimization"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/parser"
+	"github.com/ZulferDev/smallbt_go/internal/walkforward"
 )
 
 func main() {

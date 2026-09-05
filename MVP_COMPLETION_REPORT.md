@@ -396,22 +396,22 @@ Window Configuration:
 
 All test packages passing:
 ```
-ok  	github.com/1jehuang/backtest/internal/analytics	(cached)
-ok  	github.com/1jehuang/backtest/internal/backtest	(cached)
-ok  	github.com/1jehuang/backtest/internal/broker	(cached)
-ok  	github.com/1jehuang/backtest/internal/data/csv	(cached)
-ok  	github.com/1jehuang/backtest/internal/execution	(cached)
-ok  	github.com/1jehuang/backtest/internal/expression	(cached)
-ok  	github.com/1jehuang/backtest/internal/indicator	(cached)
-ok  	github.com/1jehuang/backtest/internal/market	(cached)
-ok  	github.com/1jehuang/backtest/internal/montecarlo	(cached)
-ok  	github.com/1jehuang/backtest/internal/optimization	(cached)
-ok  	github.com/1jehuang/backtest/internal/order	(cached)
-ok  	github.com/1jehuang/backtest/internal/portfolio	(cached)
-ok  	github.com/1jehuang/backtest/internal/risk	(cached)
-ok  	github.com/1jehuang/backtest/internal/signal	(cached)
-ok  	github.com/1jehuang/backtest/internal/strategy	(cached)
-ok  	github.com/1jehuang/backtest/internal/walkforward	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/analytics	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/backtest	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/broker	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/data/csv	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/execution	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/expression	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/indicator	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/market	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/montecarlo	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/optimization	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/order	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/portfolio	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/risk	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/signal	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/strategy	(cached)
+ok  	github.com/ZulferDev/smallbt_go/internal/walkforward	(cached)
 ```
 
 ---

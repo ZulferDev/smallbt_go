@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"github.com/1jehuang/backtest/internal/expression"
+	"github.com/ZulferDev/smallbt_go/internal/expression"
 )
 
 // Strategy represents the complete strategy AST.

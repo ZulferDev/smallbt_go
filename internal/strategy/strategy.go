@@ -3,7 +3,7 @@ package strategy
 import (
 	"fmt"
 
-	"github.com/1jehuang/backtest/internal/strategy/ast"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/ast"
 )
 
 // Load loads a strategy from a YAML file.

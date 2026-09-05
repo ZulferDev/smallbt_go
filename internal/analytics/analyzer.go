@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/portfolio"
+	"github.com/ZulferDev/smallbt_go/internal/portfolio"
 )
 
 // DefaultAnalyzer implements the Analyzer interface.

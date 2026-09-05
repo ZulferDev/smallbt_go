@@ -3,10 +3,10 @@ package evaluator
 import (
 	"fmt"
 
-	"github.com/1jehuang/backtest/internal/indicator"
-	"github.com/1jehuang/backtest/internal/market"
-	"github.com/1jehuang/backtest/internal/signal"
-	"github.com/1jehuang/backtest/internal/strategy/ast"
+	"github.com/ZulferDev/smallbt_go/internal/indicator"
+	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/signal"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/ast"
 )
 
 // Evaluator evaluates a strategy against market data.

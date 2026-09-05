@@ -3,7 +3,7 @@ package signal
 import (
 	"time"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 // SignalType represents the type of a trading signal.

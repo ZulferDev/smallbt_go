@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/1jehuang/backtest/internal/strategy/ast"
-	"github.com/1jehuang/backtest/internal/strategy/parser"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/ast"
+	"github.com/ZulferDev/smallbt_go/internal/strategy/parser"
 	"gopkg.in/yaml.v3"
 )
 

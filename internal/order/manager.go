@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 // OrderEvent represents an event in an order's lifecycle.

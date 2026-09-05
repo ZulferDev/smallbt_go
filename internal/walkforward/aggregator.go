@@ -3,7 +3,7 @@ package walkforward
 import (
 	"math"
 
-	"github.com/1jehuang/backtest/internal/analytics"
+	"github.com/ZulferDev/smallbt_go/internal/analytics"
 )
 
 // ComputeAggregate computes aggregate metrics across all windows.

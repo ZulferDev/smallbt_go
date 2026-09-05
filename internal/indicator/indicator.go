@@ -1,7 +1,7 @@
 package indicator
 
 import (
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 // Indicator defines the interface for all technical indicators.

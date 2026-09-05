@@ -3,7 +3,7 @@ package resample
 import (
 	"fmt"
 
-	"github.com/1jehuang/backtest/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
 // Resample resamples candles to a different timeframe.

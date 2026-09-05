@@ -4,7 +4,7 @@
 
 ### 1. Installation
 ```bash
-git clone https://github.com/1jehuang/backtest
+git clone https://github.com/ZulferDev/smallbt_go
 cd backtest
 go build ./cmd/trader
 ```

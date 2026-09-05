@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/1jehuang/backtest/internal/analytics"
-	"github.com/1jehuang/backtest/internal/backtest"
+	"github.com/ZulferDev/smallbt_go/internal/analytics"
+	"github.com/ZulferDev/smallbt_go/internal/backtest"
 )
 
 // TestParameterDefinition tests parameter range and step definitions

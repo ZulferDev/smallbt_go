@@ -1,8 +1,8 @@
 package execution
 
 import (
-	"github.com/1jehuang/backtest/internal/market"
-	"github.com/1jehuang/backtest/internal/order"
+	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/ZulferDev/smallbt_go/internal/order"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

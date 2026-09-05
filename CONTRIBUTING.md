@@ -12,7 +12,7 @@ Thank you for your interest in contributing to this quantitative trading researc
 ### Development Setup
 
 ```bash
-git clone https://github.com/1jehuang/jcode.git
+git clone https://github.com/ZulferDev/smallbt_go.git
 cd jcode
 go mod download
 go test ./...
@@ -292,7 +292,7 @@ However, significant contributors may be eligible for:
 
 ## Questions?
 
-- Check existing [GitHub Issues](https://github.com/1jehuang/jcode/issues)
+- Check existing [GitHub Issues](https://github.com/ZulferDev/smallbt_go/issues)
 - Review pull request discussions
 - Consult AGENTS.md for architectural questions
 - Read example strategies for usage patterns
