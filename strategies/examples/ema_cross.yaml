@@ -1,0 +1,39 @@
+strategy:
+  name: ema_cross_simple
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  ema_fast:
+    type: ema
+    source: close
+    period: 9
+
+  ema_slow:
+    type: ema
+    source: close
+    period: 21
+
+entry:
+  long:
+    cross_above: [ema_fast, ema_slow]
+
+exit:
+  long:
+    cross_below: [ema_fast, ema_slow]
+
+risk:
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: percent
+    value: 0.02
+
+  take_profit:
+    type: risk_reward
+    ratio: 2

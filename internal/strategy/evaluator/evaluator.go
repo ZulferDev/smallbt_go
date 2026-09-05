@@ -158,8 +158,6 @@ func (ci *compositeIndicator) Calculate(ctx *indicator.Context) (indicator.Value
 
 	// Use the composite operation type as function name
 	if ci.eval.context.BarIndex == 0 {
-		fmt.Printf("[DEBUG] Composite indicator '%s': type=%s, left=%s, right=%s, args=%v\n",
-			ci.name, ci.def.Type, ci.def.Left, ci.def.Right, args)
 	}
 
 	// Check if all dependency indicators are valid before calculating
@@ -170,8 +168,6 @@ func (ci *compositeIndicator) Calculate(ctx *indicator.Context) (indicator.Value
 				// Check validity
 				if !ci.eval.validityFlags[argStr] {
 					if ci.eval.context.BarIndex < 25 {
-						fmt.Printf("[DEBUG] Bar %d: Composite indicator '%s' invalid: dependency '%s' not ready\n",
-							ci.eval.context.BarIndex, ci.name, argStr)
 					}
 					return indicator.Value{Valid: false}, nil
 				}
@@ -211,7 +207,6 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 	// Add candle to history first to get correct barIndex
 	e.candles = append(e.candles, candle)
 	barIndex := len(e.candles) - 1
-	fmt.Printf("[DEBUG] Bar %d: UpdateCandle START\n", barIndex)
 	// Save previous indicator values before calculating new ones
 	// This is needed for cross detection
 	for k, v := range e.values {
@@ -239,12 +234,10 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 		if value.Valid {
 			e.values[name] = value.Value
 			if barIndex < 25 && (name == "volume_avg" || name == "ema_fast" || name == "ema_slow") {
-				fmt.Printf("[DEBUG] Bar %d: Stored basic indicator '%s' = %.4f (Valid=%v)\n", barIndex, name, value.Value, value.Valid)
 			}
 		} else {
 			e.values[name] = 0
 			if barIndex < 25 && (name == "volume_avg" || name == "ema_fast" || name == "ema_slow") {
-				fmt.Printf("[DEBUG] Bar %d: Stored basic indicator '%s' = 0 (NOT VALID)\n", barIndex, name)
 			}
 		}
 	}
@@ -259,52 +252,39 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 	}
 
 	if barIndex == 0 {
-		fmt.Printf("[DEBUG] Found %d composite indicators: %v\n", len(compositeNames), compositeNames)
 	}
 
 	// Topologically sort composite indicators based on dependencies
 	sortedCompositeNames, err := e.topologicalSortCompositeIndicators(compositeNames)
 	if err != nil {
-		fmt.Printf("[DEBUG] Error sorting composite indicators: %v\n", err)
 		return fmt.Errorf("sort composite indicators: %w", err)
 	}
 
 	if barIndex == 0 {
-		fmt.Printf("[DEBUG] Sorted composite indicators: %v\n", sortedCompositeNames)
 	}
 
-	fmt.Printf("[DEBUG] Bar %d: About to loop through %d composite indicators\n", barIndex, len(sortedCompositeNames))
 	for _, name := range sortedCompositeNames {
-		fmt.Printf("[DEBUG] Bar %d: Processing composite indicator '%s'\n", barIndex, name)
 		ind := e.indicators[name]
 		if _, isComposite := ind.(*compositeIndicator); !isComposite {
-			fmt.Printf("[DEBUG] Skipping non-composite indicator: %s\n", name)
 			continue
 		}
 
 		value, err := ind.Calculate(e.context)
 		if err != nil {
-			fmt.Printf("[DEBUG] Bar %d: ERROR calculating composite indicator '%s': %v\n", barIndex, name, err)
 			return fmt.Errorf("calculate indicator %s: %w", name, err)
 		}
 		e.context.IndicatorValues[name] = value
 		e.validityFlags[name] = value.Valid
 		if value.Valid {
 			e.values[name] = value.Value
-			fmt.Printf("[DEBUG] Bar %d: Stored composite indicator '%s' value: %.4f\n", barIndex, name, e.values[name])
 		} else {
 			e.values[name] = 0
-			fmt.Printf("[DEBUG] Bar %d: Composite indicator '%s' is invalid, stored 0\n", barIndex, name)
 		}
 
 		if e.context.BarIndex == 0 {
-			fmt.Printf("[DEBUG] Bar %d: About to calculate composite indicator '%s'\n", barIndex, name)
-			fmt.Printf("[DEBUG] Bar %d: Stored composite indicator '%s' value: %.4f\n", barIndex, name, e.values[name])
 		}
 	}
 
-	fmt.Printf("[DEBUG] Bar %d: After composite indicator loop: volume_ratio=%v\n", barIndex, e.values["volume_ratio"])
-	fmt.Printf("[DEBUG] Bar %d: UpdateCandle END\n", barIndex)
 
 	return nil
 }
@@ -319,25 +299,16 @@ func (e *Evaluator) Evaluate(hasPosition bool, positionSide string) ([]signal.Si
 	}
 
 	currentCandle := e.candles[len(e.candles)-1]
-	barIndex := len(e.candles) - 1
-
-	// DEBUG: Log when evaluate is called
-	fmt.Printf("[DEBUG] Bar %d: Evaluate START\n", barIndex)
-	fmt.Printf("[EVALUATE] candle=%d, hasPosition=%v, positionSide=%s, indicators=%d\n",
-		len(e.candles), hasPosition, positionSide, len(e.prevValues))
 
 	// Evaluate entry conditions
 	if !hasPosition {
 		// Check long entry
 		if e.strategy.Entry.Long != nil {
-			fmt.Printf("[EVALUATE] Checking long entry condition\n")
 			// Extract required indicators and check validity
 			requiredIndicators := e.extractIndicatorNames(e.strategy.Entry.Long)
 			if !e.AreIndicatorsValid(requiredIndicators) {
-				fmt.Printf("[EVALUATE] Long entry skipped: indicators not valid yet. Required: %v\n", requiredIndicators)
 			} else {
 				shouldEntry := e.evaluateCondition(e.strategy.Entry.Long)
-				fmt.Printf("[EVALUATE] Long entry result: %v\n", shouldEntry)
 				if shouldEntry {
 					signals = append(signals, signal.Signal{
 						Type:      signal.SignalTypeLongEntry,
@@ -345,7 +316,6 @@ func (e *Evaluator) Evaluate(hasPosition bool, positionSide string) ([]signal.Si
 						Price:     currentCandle.Close,
 						Reason:    "long entry signal",
 					})
-					fmt.Printf("[SIGNAL] Generated long entry signal at bar %d, price=%.2f\n", len(e.candles), currentCandle.Close)
 				}
 			}
 		}
@@ -389,7 +359,6 @@ func (e *Evaluator) Evaluate(hasPosition bool, positionSide string) ([]signal.Si
 		}
 	}
 
-	fmt.Printf("[DEBUG] Bar %d: Returning %d signals\n", len(e.candles)-1, len(signals))
 	return signals, nil
 }
 
@@ -436,9 +405,7 @@ func (e *Evaluator) evaluateCondition(cond *ast.Condition) bool {
 
 // evaluateFunction evaluates a function-based condition.
 func (e *Evaluator) evaluateFunction(fn string, args []interface{}) bool {
-	fmt.Printf("[DEBUG] Bar %d: evaluateFunction(%s, %v)\n", e.context.BarIndex, fn, args)
 	if len(args) < 2 {
-		fmt.Printf("[DEBUG] evaluateFunction: insufficient args (%d)\n", len(args))
 		return false
 	}
 
@@ -447,7 +414,6 @@ func (e *Evaluator) evaluateFunction(fn string, args []interface{}) bool {
 	for i, arg := range args {
 		val, err := e.resolveValue(arg)
 		if err != nil {
-			fmt.Printf("[DEBUG] evaluateFunction: resolveValue error for arg %v: %v\n", arg, err)
 			return false
 		}
 		values[i] = val
@@ -536,7 +502,6 @@ func (e *Evaluator) EvaluateExpression(fn string, args []interface{}) (float64, 
 		}
 		values[i] = val
 		if e.context.BarIndex < 5 && (fn == "divide" || fn == "add" || fn == "multiply" || fn == "subtract") {
-			fmt.Printf("[DEBUG] resolveValue: arg[%d]=%v -> value=%.4f\n", i, arg, val)
 		}
 	}
 
@@ -557,11 +522,9 @@ func (e *Evaluator) EvaluateExpression(fn string, args []interface{}) (float64, 
 		return result, nil
 	case "divide":
 		if e.context.BarIndex < 5 {
-			fmt.Printf("[DEBUG] divide: values=%v (from args=%v)\n", values, args)
 		}
 		if values[1] == 0 {
 			// Return 0 instead of error - indicator not ready yet
-			fmt.Printf("[DEBUG] divide by zero at bar %d: values[0]=%.4f, values[1]=%.4f\n", e.context.BarIndex, values[0], values[1])
 			return 0, nil
 		}
 		return values[0] / values[1], nil
@@ -792,7 +755,6 @@ func (e *Evaluator) GetIndicatorValue(name string) (float64, error) {
 // crossAbove detects if line1 crossed above line2 between bar[t-1] and bar[t]
 func (e *Evaluator) crossAbove(line1Arg, line2Arg interface{}) bool {
 	if len(e.candles) < 2 {
-		fmt.Printf("[DEBUG] crossAbove: not enough candles (%d)\n", len(e.candles))
 		return false
 	}
 
@@ -800,7 +762,6 @@ func (e *Evaluator) crossAbove(line1Arg, line2Arg interface{}) bool {
 	val1Current, err1 := e.resolveValueAt(line1Arg, len(e.candles)-1)
 	val2Current, err2 := e.resolveValueAt(line2Arg, len(e.candles)-1)
 	if err1 != nil || err2 != nil {
-		fmt.Printf("[DEBUG] crossAbove: error getting current values: %v, %v\n", err1, err2)
 		return false
 	}
 
@@ -808,13 +769,10 @@ func (e *Evaluator) crossAbove(line1Arg, line2Arg interface{}) bool {
 	val1Prev, err1 := e.resolveValueAt(line1Arg, len(e.candles)-2)
 	val2Prev, err2 := e.resolveValueAt(line2Arg, len(e.candles)-2)
 	if err1 != nil || err2 != nil {
-		fmt.Printf("[DEBUG] crossAbove: error getting previous values: %v, %v\n", err1, err2)
 		return false
 	}
 
 	result := val1Prev <= val2Prev && val1Current > val2Current
-	fmt.Printf("[DEBUG] crossAbove(%v, %v): prev=(%.2f, %.2f) curr=(%.2f, %.2f) -> %v\n",
-		line1Arg, line2Arg, val1Prev, val2Prev, val1Current, val2Current, result)
 
 	// cross_above: line1 was below line2, now above
 	return result
@@ -949,12 +907,10 @@ func (e *Evaluator) extractIndicatorNames(cond *ast.Condition) []string {
 				// Check if it's an indicator name
 				if _, exists := e.indicators[strArg]; exists {
 					names = append(names, strArg)
-					fmt.Printf("[DEBUG] extractIndicatorNames: found indicator '%s' from func arg\n", strArg)
 				}
 			}
 		}
 	}
 
-	fmt.Printf("[DEBUG] extractIndicatorNames: returning %v\n", names)
 	return names
 }

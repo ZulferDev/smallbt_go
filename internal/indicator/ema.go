@@ -10,6 +10,8 @@ type EMA struct {
 	period     int
 	source     string
 	multiplier float64
+	prevEMA    *float64 // Cache previous EMA value
+	lastBarIdx int      // Last bar index calculated (for cache invalidation)
 }
 
 // EMAFactory creates a new EMA indicator from config.
@@ -46,7 +48,12 @@ func (e *EMA) Calculate(ctx *Context) (Value, error) {
 		return InvalidValue, nil
 	}
 
-	// For the first value, use SMA
+	// Check if we've already calculated EMA for this bar index
+	if e.lastBarIdx == ctx.BarIndex && e.prevEMA != nil {
+		return NewValue(*e.prevEMA), nil
+	}
+
+	// For the first value (when len == period), use SMA
 	if len(ctx.Candles) == e.period {
 		sum := 0.0
 		for i := 0; i < e.period; i++ {
@@ -54,34 +61,42 @@ func (e *EMA) Calculate(ctx *Context) (Value, error) {
 			sum += price
 		}
 		sma := sum / float64(e.period)
+		e.prevEMA = &sma
+		e.lastBarIdx = ctx.BarIndex
 		return NewValue(sma), nil
 	}
 
 	// For subsequent values, use EMA formula:
 	// EMA(t) = Price(t) * multiplier + EMA(t-1) * (1 - multiplier)
 
-	// We need the previous EMA value
-	// To get it, we temporarily calculate with one less candle
-	prevCtx := &Context{
-		Current:         ctx.Candles[len(ctx.Candles)-2],
-		Candles:         ctx.Candles[:len(ctx.Candles)-1],
-		Symbol:          ctx.Symbol,
-		Timeframe:       ctx.Timeframe,
-		IndicatorValues: ctx.IndicatorValues,
-		BarIndex:        ctx.BarIndex - 1,
-	}
+	// If prevEMA is nil but we have enough data, we need to warm up the cache
+	// This happens when we skip to a later bar without calculating from the start
+	if e.prevEMA == nil {
+		// Calculate SMA for the first 'period' candles to initialize
+		sum := 0.0
+		for i := 0; i < e.period; i++ {
+			price := SourcePrice(ctx.Candles[i], e.source)
+			sum += price
+		}
+		sma := sum / float64(e.period)
+		e.prevEMA = &sma
 
-	prevEMA, err := e.Calculate(prevCtx)
-	if err != nil {
-		return InvalidValue, err
-	}
-
-	if !prevEMA.Valid {
-		return InvalidValue, nil
+		// Now calculate EMA for remaining candles up to current
+		for i := e.period; i < len(ctx.Candles); i++ {
+			price := SourcePrice(ctx.Candles[i], e.source)
+			ema := price*e.multiplier + *e.prevEMA*(1.0-e.multiplier)
+			e.prevEMA = &ema
+		}
+		e.lastBarIdx = ctx.BarIndex
+		return NewValue(*e.prevEMA), nil
 	}
 
 	currentPrice := SourcePrice(ctx.Current, e.source)
-	ema := currentPrice*e.multiplier + prevEMA.Value*(1.0-e.multiplier)
+	ema := currentPrice*e.multiplier + *e.prevEMA*(1.0-e.multiplier)
+
+	// Cache for next calculation
+	e.prevEMA = &ema
+	e.lastBarIdx = ctx.BarIndex
 
 	return NewValue(ema), nil
 }

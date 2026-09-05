@@ -1,0 +1,39 @@
+strategy:
+  name: sma_cross_simple
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  sma_fast:
+    type: sma
+    source: close
+    period: 10
+
+  sma_slow:
+    type: sma
+    source: close
+    period: 30
+
+entry:
+  long:
+    cross_above: [sma_fast, sma_slow]
+
+exit:
+  long:
+    cross_below: [sma_fast, sma_slow]
+
+risk:
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: percent
+    value: 0.03
+
+  take_profit:
+    type: risk_reward
+    ratio: 1.5
