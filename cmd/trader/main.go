@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
@@ -153,9 +154,25 @@ func runBacktest(args []string) error {
 	timeframe := fs.String("timeframe", "1h", "Timeframe (e.g., 1m, 5m, 15m, 30m, 1h, 4h, 1d)")
 	startDate := fs.String("start", "", "Start date (YYYY-MM-DD)")
 	endDate := fs.String("end", "", "End date (YYYY-MM-DD)")
+	cpuProfile := fs.String("cpuprofile", "", "Write CPU profile to file")
+	memProfile := fs.String("memprofile", "", "Write memory profile to file")
 
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
+	}
+
+	// Start CPU profiling if requested
+	if *cpuProfile != "" {
+		f, err := os.Create(*cpuProfile)
+		if err != nil {
+			return fmt.Errorf("create CPU profile: %w", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			return fmt.Errorf("start CPU profile: %w", err)
+		}
+		defer pprof.StopCPUProfile()
+		fmt.Printf("CPU profiling enabled: %s\n", *cpuProfile)
 	}
 
 	// Validate required flags
@@ -257,6 +274,19 @@ func runBacktest(args []string) error {
 			return fmt.Errorf("write JSON file: %w", err)
 		}
 		fmt.Printf("Results saved to %s\n", *outputJSON)
+	}
+
+	// Write memory profile if requested
+	if *memProfile != "" {
+		f, err := os.Create(*memProfile)
+		if err != nil {
+			return fmt.Errorf("create memory profile: %w", err)
+		}
+		defer f.Close()
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			return fmt.Errorf("write memory profile: %w", err)
+		}
+		fmt.Printf("Memory profile saved to %s\n", *memProfile)
 	}
 
 	return nil
