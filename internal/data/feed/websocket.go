@@ -2,6 +2,7 @@ package feed
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -230,15 +231,69 @@ func (f *WebSocketFeed) readLoop() {
 			return
 		}
 		
-		// TODO: Parse message into Candle
-		// For now, just acknowledge receipt
-		_ = message
+		// Parse message into Candle
+		candle, err := f.parseMessage(message)
+		if err != nil {
+			// Log parse error but don't disconnect
+			continue
+		}
+		
+		if candle != nil {
+			// Buffer the candle
+			err = f.buffer.Push(candle)
+			if err != nil {
+				// Buffer overflow, try to drain and retry
+				drained := f.buffer.Drain()
+				for _, c := range drained {
+					f.broadcast(c)
+				}
+				f.buffer.Push(candle)
+			}
+			
+			// Broadcast immediately
+			f.broadcast(candle)
+		}
 		
 		// Update last activity time
 		f.lastPingMu.Lock()
 		f.lastPing = time.Now()
 		f.lastPingMu.Unlock()
 	}
+}
+
+// parseMessage parses a WebSocket message into a Candle.
+// This is a generic JSON parser. Exchange-specific implementations
+// should override this in custom feed types.
+func (f *WebSocketFeed) parseMessage(message []byte) (*market.Candle, error) {
+	var data struct {
+		Timestamp int64   `json:"timestamp"`
+		Open      float64 `json:"open"`
+		High      float64 `json:"high"`
+		Low       float64 `json:"low"`
+		Close     float64 `json:"close"`
+		Volume    float64 `json:"volume"`
+	}
+	
+	err := json.Unmarshal(message, &data)
+	if err != nil {
+		return nil, fmt.Errorf("parse message: %w", err)
+	}
+	
+	candle := &market.Candle{
+		Timestamp: time.Unix(data.Timestamp, 0),
+		Open:      data.Open,
+		High:      data.High,
+		Low:       data.Low,
+		Close:     data.Close,
+		Volume:    data.Volume,
+	}
+	
+	// Validate candle
+	if !candle.IsValid() {
+		return nil, fmt.Errorf("invalid candle: %+v", candle)
+	}
+	
+	return candle, nil
 }
 
 // heartbeatLoop monitors connection health via ping/pong.
