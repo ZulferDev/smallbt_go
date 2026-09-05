@@ -14,6 +14,7 @@ import (
 	"github.com/ZulferDev/smallbt_go/internal/backtest"
 	"github.com/ZulferDev/smallbt_go/internal/broker"
 	"github.com/ZulferDev/smallbt_go/internal/data/csv"
+	"github.com/ZulferDev/smallbt_go/internal/data/feed"
 	"github.com/ZulferDev/smallbt_go/internal/execution"
 	"github.com/ZulferDev/smallbt_go/internal/market"
 	"github.com/ZulferDev/smallbt_go/internal/montecarlo"
@@ -794,6 +795,7 @@ func runPaper(args []string) error {
 	initialPrice := fs.Float64("price", 50000.0, "Initial price")
 	initialBalance := fs.Float64("balance", 10000.0, "Initial balance")
 	duration := fs.Int("duration", 60, "Duration in seconds")
+	websocketURL := fs.String("websocket", "", "WebSocket URL for real-time data (optional)")
 	
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
@@ -821,6 +823,9 @@ func runPaper(args []string) error {
 	fmt.Printf("Initial Price: %.2f\n", *initialPrice)
 	fmt.Printf("Initial Balance: %.2f\n", *initialBalance)
 	fmt.Printf("Duration: %d seconds\n", *duration)
+	if *websocketURL != "" {
+		fmt.Printf("WebSocket: %s\n", *websocketURL)
+	}
 	fmt.Printf("\nPress Ctrl+C to stop\n\n")
 
 	// Create paper broker
@@ -831,6 +836,11 @@ func runPaper(args []string) error {
 
 	// Set initial price
 	broker.UpdatePrice(*symbol, *initialPrice)
+
+	// If WebSocket URL provided, use real-time data
+	if *websocketURL != "" {
+		return runPaperWithWebSocket(broker, *websocketURL, *symbol, *duration)
+	}
 
 	// Simple price simulation: static price for MVP
 	// TODO: Add price feed with random walk or live data
@@ -896,4 +906,76 @@ func printPaperSummary(broker *broker.PaperBroker) error {
 
 	fmt.Println()
 	return nil
+}
+
+// runPaperWithWebSocket runs paper trading with WebSocket real-time data.
+func runPaperWithWebSocket(broker *broker.PaperBroker, wsURL, symbol string, durationSec int) error {
+	// Create WebSocket feed
+	config := feed.DefaultWebSocketConfig()
+	config.URL = wsURL
+	config.Symbols = []string{symbol}
+	config.Timeframe = time.Hour // Default 1h
+	
+	wsFeed := feed.NewWebSocketFeed(config)
+	
+	err := wsFeed.Connect()
+	if err != nil {
+		return fmt.Errorf("connect to WebSocket: %w", err)
+	}
+	defer wsFeed.Close()
+	
+	fmt.Printf("Connected to WebSocket: %s\n", wsURL)
+	fmt.Printf("Subscribing to: %s\n\n", symbol)
+	
+	// Subscribe to candle updates
+	candleCh := wsFeed.Subscribe()
+	
+	startTime := time.Now()
+	timeout := time.After(time.Duration(durationSec) * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	
+	candleCount := 0
+	
+	for {
+		select {
+		case <-timeout:
+			fmt.Println("\nPaper trading session complete")
+			fmt.Printf("Received %d candles\n", candleCount)
+			return printPaperSummary(broker)
+			
+		case candle := <-candleCh:
+			if candle == nil {
+				continue
+			}
+			
+			candleCount++
+			
+			// Update broker with latest price
+			broker.UpdatePrice(symbol, candle.Close)
+			
+			// Log candle
+			fmt.Printf("[Candle %d] %s | O:%.2f H:%.2f L:%.2f C:%.2f V:%.2f\n",
+				candleCount,
+				candle.Timestamp.Format("15:04:05"),
+				candle.Open, candle.High, candle.Low, candle.Close, candle.Volume)
+			
+		case <-ticker.C:
+			// Print status
+			ctx := context.Background()
+			positions, _ := broker.GetPositions(ctx)
+			balance, _ := broker.GetBalance(ctx)
+			
+			elapsed := time.Since(startTime).Seconds()
+			fmt.Printf("\n[%.0fs] Balance: %.2f | Equity: %.2f | Positions: %d | Candles: %d\n",
+				elapsed, balance.Cash, balance.Equity, len(positions), candleCount)
+			
+			for _, pos := range positions {
+				pnl := pos.UnrealizedPnL()
+				fmt.Printf("  %s: %.4f @ %.2f (PnL: %.2f)\n",
+					pos.Symbol, pos.Quantity, pos.EntryPrice, pnl)
+			}
+			fmt.Println()
+		}
+	}
 }
