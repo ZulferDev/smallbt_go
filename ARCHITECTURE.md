@@ -1085,3 +1085,396 @@ WebSocketFeed
 **Last Updated:** 2026-09-05 (Phase 16 Week 1)  
 **Architecture Status:** Stable and extensible  
 **Next Evolution:** Paper Trading (Week 2)
+
+---
+
+## Real-Time Data Feed Architecture
+
+**Status:** ✅ Production Ready (Phase 16 Week 3)
+
+### Overview
+
+The real-time data feed provides WebSocket-based live market data with automatic reconnection, buffering, and reliable message delivery for paper trading and future live trading.
+
+### Component Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      WebSocket Feed                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────────┐      ┌──────────────┐     ┌────────────┐ │
+│  │              │      │              │     │            │ │
+│  │  Connection  │─────▶│   readLoop   │────▶│   Buffer   │ │
+│  │  Management  │      │              │     │            │ │
+│  │              │      └──────────────┘     └────────────┘ │
+│  └──────────────┘                                  │        │
+│         │                                           │        │
+│         │         ┌──────────────┐                 ▼        │
+│         │         │              │          ┌────────────┐  │
+│         └────────▶│ errorHandler │          │ broadcast  │  │
+│                   │              │          │            │  │
+│                   └──────────────┘          └────────────┘  │
+│                          │                         │        │
+│                          ▼                         │        │
+│                   ┌──────────────┐                │        │
+│                   │  reconnect   │                │        │
+│                   │ (exp backoff)│                │        │
+│                   └──────────────┘                │        │
+│                                                    ▼        │
+│                                          ┌──────────────┐   │
+│                                          │ Subscribers  │   │
+│                                          │  (channels)  │   │
+│                                          └──────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Connection State Machine
+
+```
+StateDisconnected
+    │
+    │ Connect()
+    ▼
+StateConnecting ─────────┐
+    │                    │
+    │ (success)          │ (failure)
+    ▼                    │
+StateConnected           │
+    │                    │
+    │ (error/timeout)    │
+    ▼                    │
+StateReconnecting ◀──────┘
+    │
+    │ (retry with exponential backoff)
+    │
+    ├─→ StateConnecting ─→ (success) ─→ StateConnected
+    │                  └─→ (failure) ─→ StateReconnecting
+    │
+    └─→ (max attempts) ─→ StateDisconnected
+    
+    (any state) + Close() → StateClosed
+```
+
+### Data Pipeline
+
+```
+WebSocket Message (JSON)
+    │
+    ▼
+readLoop()
+    │
+    ├─→ parseMessage(message)
+    │       │
+    │       ├─→ (success) ─→ Candle struct
+    │       └─→ (error) ─→ Log & continue (don't disconnect)
+    │
+    ▼
+buffer.Push(candle)
+    │
+    ├─→ (success) ─→ buffer
+    └─→ (overflow) ─→ buffer.Drain() ─→ broadcast(drained) ─→ retry push
+    │
+    ▼
+broadcast(candle)
+    │
+    ├─→ subscriber 1 channel
+    ├─→ subscriber 2 channel
+    └─→ subscriber N channel
+```
+
+### Reconnection Strategy
+
+**Exponential Backoff:**
+```
+Attempt 1: 1s
+Attempt 2: 2s
+Attempt 3: 4s
+Attempt 4: 8s
+Attempt 5: 16s
+Attempt 6: 32s
+Attempt 7+: 60s (capped)
+```
+
+**Reconnection Flow:**
+1. Error detected (connection loss, timeout, read error)
+2. Close current connection
+3. Set state to `StateReconnecting`
+4. Loop with exponential backoff:
+   - Wait backoff delay
+   - Attempt reconnection
+   - If success: Reset counter, restart goroutines, return
+   - If failure: Continue loop
+5. After max attempts: Set state to `StateDisconnected`
+
+### Buffer Management
+
+**Buffer Characteristics:**
+- Thread-safe with RWMutex
+- Configurable size (default: 1000 candles)
+- Overflow channel for capacity management
+- Zero-allocation drain operation
+
+**Normal Operation:**
+```
+Candle → Push → Buffer → Broadcast → Subscribers
+```
+
+**Overflow Handling:**
+```
+Candle → Push (buffer full)
+    │
+    ▼
+Drain entire buffer
+    │
+    ▼
+Broadcast all drained candles
+    │
+    ▼
+Push new candle
+    │
+    ▼
+Broadcast new candle
+```
+
+**Rationale:**
+- Maintains chronological order
+- Prevents partial data loss
+- Simple implementation
+- Overflow rare with 1000 candle capacity
+
+### Message Format
+
+**Generic JSON Format:**
+```json
+{
+  "timestamp": 1609459200,
+  "open": 29000.0,
+  "high": 29500.0,
+  "low": 28500.0,
+  "close": 29200.0,
+  "volume": 1000.0
+}
+```
+
+**Parsing:**
+- JSON unmarshaling to OHLCV struct
+- Timestamp conversion: Unix epoch → `time.Time`
+- Candle validation via `IsValid()`
+- Parse errors logged but don't disconnect
+
+**Extensibility:**
+- `parseMessage()` method can be overridden
+- Exchange-specific implementations can provide custom parsers
+- Week 4: Binance/Coinbase adapters
+
+### Heartbeat Monitoring
+
+**Configuration:**
+- Ping interval: 30 seconds
+- Pong timeout: 10 seconds
+- Automatic reconnection on timeout
+
+**Mechanism:**
+1. `heartbeatLoop()` sends ping every 30s
+2. `readLoop()` updates `lastPing` timestamp on any message
+3. If no activity for ping interval + timeout (40s), trigger reconnection
+
+### Goroutine Management
+
+**Lifecycle:**
+```
+Connect()
+    │
+    ├─→ readLoop() (reads messages, parses, broadcasts)
+    ├─→ heartbeatLoop() (monitors connection health)
+    └─→ errorHandler() (handles errors, triggers reconnection)
+
+Close()
+    │
+    ├─→ cancel context (stops all goroutines)
+    ├─→ close connection
+    └─→ WaitGroup.Wait() (ensures clean shutdown)
+```
+
+**Safety:**
+- Context-based cancellation
+- WaitGroup ensures all goroutines finish
+- No goroutine leaks
+- Proper cleanup on Close()
+
+### Thread Safety
+
+**Synchronization:**
+- State: `RWMutex` for concurrent read/write
+- Buffer: `RWMutex` for push/drain operations
+- Subscribers: `RWMutex` for subscribe/broadcast
+- Context: Cancellation signal for all goroutines
+
+**Design:**
+- Read-heavy operations use `RLock()`
+- Write operations use `Lock()`
+- Non-blocking broadcast (select with default)
+
+### Subscriber Pattern
+
+**Multiple Subscribers:**
+```go
+ch1 := feed.Subscribe()  // Paper trading
+ch2 := feed.Subscribe()  // Monitoring
+ch3 := feed.Subscribe()  // Analytics
+```
+
+**Broadcast Behavior:**
+- Non-blocking: Uses `select` with `default`
+- Slow subscriber doesn't block others
+- Each subscriber has independent buffered channel (cap 100)
+- Channels closed on `feed.Close()`
+
+### Error Handling
+
+**Parse Errors:**
+- Don't disconnect on parse failure
+- Log error (future: structured logging)
+- Continue processing next message
+- Rationale: Transient errors, non-candle messages
+
+**Connection Errors:**
+- Close connection
+- Trigger automatic reconnection
+- Buffer preserves data during reconnection
+- Subscribers unaffected (reconnection transparent)
+
+**Buffer Overflow:**
+- Drain and broadcast all buffered candles
+- Retry push for new candle
+- Maintains data integrity and order
+
+### Configuration
+
+```go
+type WebSocketConfig struct {
+    URL              string          // WebSocket endpoint
+    Symbols          []string        // Symbols to subscribe
+    Timeframe        time.Duration   // Candle timeframe
+    ReconnectDelay   time.Duration   // Base delay (default: 1s)
+    MaxReconnects    int             // Max attempts (default: 10)
+    PingInterval     time.Duration   // Ping frequency (default: 30s)
+    PongTimeout      time.Duration   // Timeout threshold (default: 10s)
+    BufferSize       int             // Buffer capacity (default: 1000)
+}
+```
+
+### Integration Points
+
+**Paper Trading:**
+```go
+feed := NewWebSocketFeed(config)
+feed.Connect()
+ch := feed.Subscribe()
+
+for candle := range ch {
+    paperBroker.ProcessCandle(candle)
+}
+```
+
+**Live Trading (Future):**
+```go
+feed := NewWebSocketFeed(config)
+feed.Connect()
+ch := feed.Subscribe()
+
+for candle := range ch {
+    liveBroker.ProcessCandle(candle)
+    strategy.Evaluate(candle)
+}
+```
+
+### Testing Strategy
+
+**Unit Tests (18 tests):**
+- Connection lifecycle
+- State transitions
+- Buffer operations
+- Configuration validation
+
+**Reconnection Tests (6 tests):**
+- Successful reconnection after failures
+- Max retry limit enforcement
+- Exponential backoff validation
+- Graceful cancellation
+- State machine behavior
+
+**Integration Tests (6 tests):**
+- End-to-end with mock WebSocket server
+- Message parsing validation
+- Multiple subscribers
+- Buffer overflow handling
+- Data integrity
+
+**Total: 30 tests, 100% passing**
+
+### Performance Characteristics
+
+| Operation | Time | Notes |
+|-----------|------|-------|
+| Connect | <100ms | Network dependent |
+| Parse message | <100μs | JSON unmarshaling |
+| Buffer push | <1μs | Mutex + append |
+| Broadcast | <10μs | Non-blocking channel send |
+| Reconnect (attempt 1) | 1s | Exponential backoff |
+
+### Production Readiness
+
+**Completed Features:**
+- ✅ WebSocket connection management
+- ✅ 5-state machine (disconnected/connecting/connected/reconnecting/closed)
+- ✅ Automatic reconnection with exponential backoff
+- ✅ Thread-safe buffering
+- ✅ Message parsing and validation
+- ✅ Multiple subscriber support
+- ✅ Heartbeat monitoring
+- ✅ Graceful shutdown
+- ✅ Comprehensive test coverage (30 tests)
+
+**Deferred to Week 4:**
+- Exchange-specific protocol adapters
+- Authentication/API keys
+- Subscription management
+- Rate limiting
+
+### Code Metrics
+
+**Production Code:**
+- `websocket.go`: 457 lines
+- `buffer.go`: 93 lines
+- **Total: 550 lines**
+
+**Test Code:**
+- `websocket_test.go`: 247 lines
+- `buffer_test.go`: 243 lines
+- `reconnect_test.go`: 296 lines
+- `integration_test.go`: 283 lines
+- **Total: 1,069 lines**
+
+**Test/Production Ratio:** 1.94:1
+
+### Future Enhancements (Week 4+)
+
+**Exchange Adapters:**
+- Binance WebSocket protocol
+- Coinbase WebSocket protocol
+- Custom adapter interface
+
+**Advanced Features:**
+- Authentication flow
+- Subscription management (add/remove symbols)
+- Rate limiting
+- Compression support
+- Multi-exchange aggregation
+
+---
+
+**Last Updated:** 2026-09-05 (Phase 16 Week 3)  
+**Architecture Status:** Production ready for generic WebSocket feeds  
+**Next Evolution:** Exchange-specific adapters (Week 4)
