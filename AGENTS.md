@@ -822,8 +822,11 @@ The engine should:
 4. Build a dependency graph.
 5. Resolve evaluation order.
 6. Cache reusable values where appropriate.
+7. Propagate validity status through the dependency graph.
 
 Circular dependencies must produce a clear configuration error.
+
+A composite indicator MUST NOT be considered valid until ALL its dependencies are valid. This prevents signals from being generated using incomplete indicator values during warm-up periods.
 
 ---
 
