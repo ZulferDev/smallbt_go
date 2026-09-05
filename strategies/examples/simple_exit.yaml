@@ -1,0 +1,34 @@
+# Simple Strategy with Entry and Exit
+strategy:
+  name: simple_exit
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  ema9:
+    type: ema
+    source: close
+    period: 9
+
+entry:
+  long:
+    all:
+      - gt: [close, ema9]
+
+exit:
+  long:
+    all:
+      - lt: [close, ema9]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 20  # Use 20% of equity (~$2,000 at start)
+
+state:
+  in_position:
+    type: bool
+    default: false

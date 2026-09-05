@@ -69,6 +69,7 @@ func (b *Broker) ProcessPendingOrders(candle *market.Candle, timestamp time.Time
 			continue
 		}
 
+		fmt.Printf("[BROKER] Fill result for order %s: price=%.2f, qty=%.2f, fees=%.2f\n", orderID, fill.Price, fill.Quantity, fill.Fees)
 		// Fill the order
 		fill.OrderID = orderID
 		err = b.orderManager.FillOrder(orderID, fill)
@@ -79,6 +80,7 @@ func (b *Broker) ProcessPendingOrders(candle *market.Candle, timestamp time.Time
 		// Check if order is fully filled
 		updatedOrder, _ := b.orderManager.GetOrder(orderID)
 		if updatedOrder.Status == order.OrderStatusFilled {
+			fmt.Printf("[BROKER] Order %s FULLY FILLED at price %.2f\n", orderID, fill.Price)
 			filledOrderIDs = append(filledOrderIDs, orderID)
 			delete(b.pendingOrders, orderID)
 		}

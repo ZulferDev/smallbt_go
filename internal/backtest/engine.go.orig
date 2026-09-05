@@ -287,10 +287,8 @@ func runBacktestLoop(
 					)
 					if err != nil {
 						// Log error but continue - this shouldn't happen with proper capital
-						fmt.Printf("[ENGINE] ERROR opening long position: %v\n", err)
 						continue
 					}
-					fmt.Printf("[ENGINE] Successfully opened long position at price %.2f, qty %.2f\n", ord.FilledPrice, ord.Quantity)
 					state.hasPosition = true
 					state.positionSide = portfolio.PositionSideLong
 					state.entryPrice = ord.FilledPrice
@@ -361,10 +359,8 @@ func runBacktestLoop(
 					)
 					if err != nil {
 						// Log error but continue - this shouldn't happen with proper capital
-						fmt.Printf("[ENGINE] ERROR opening short position: %v\n", err)
 						continue
 					}
-					fmt.Printf("[ENGINE] Successfully opened short position at price %.2f, qty %.2f\n", ord.FilledPrice, ord.Quantity)
 					state.hasPosition = true
 					state.positionSide = portfolio.PositionSideShort
 					state.entryPrice = ord.FilledPrice

@@ -1,0 +1,29 @@
+# Always Enter Strategy - Simple test to verify engine logic
+strategy:
+  name: always_enter
+  version: "1"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  ema9:
+    type: ema
+    source: close
+    period: 9
+
+entry:
+  long:
+    all:
+      - gt: [close, ema9]
+
+risk:
+  position_size:
+    type: fixed
+    value: 1.0
+
+state:
+  setup_valid:
+    type: bool
+    default: false

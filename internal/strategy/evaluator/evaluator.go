@@ -218,8 +218,14 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 		e.context.IndicatorValues[name] = value
 		if value.Valid {
 			e.values[name] = value.Value
+			if barIndex < 25 && (name == "volume_avg" || name == "ema_fast" || name == "ema_slow") {
+				fmt.Printf("[DEBUG] Bar %d: Stored basic indicator '%s' = %.4f (Valid=%v)\n", barIndex, name, value.Value, value.Valid)
+			}
 		} else {
 			e.values[name] = 0
+			if barIndex < 25 && (name == "volume_avg" || name == "ema_fast" || name == "ema_slow") {
+				fmt.Printf("[DEBUG] Bar %d: Stored basic indicator '%s' = 0 (NOT VALID)\n", barIndex, name)
+			}
 		}
 	}
 
@@ -501,6 +507,9 @@ func (e *Evaluator) EvaluateExpression(fn string, args []interface{}) (float64, 
 			return 0, err
 		}
 		values[i] = val
+		if e.context.BarIndex < 5 && (fn == "divide" || fn == "add" || fn == "multiply" || fn == "subtract") {
+			fmt.Printf("[DEBUG] resolveValue: arg[%d]=%v -> value=%.4f\n", i, arg, val)
+		}
 	}
 
 	switch fn {
@@ -519,8 +528,12 @@ func (e *Evaluator) EvaluateExpression(fn string, args []interface{}) (float64, 
 		}
 		return result, nil
 	case "divide":
+		if e.context.BarIndex < 5 {
+			fmt.Printf("[DEBUG] divide: values=%v (from args=%v)\n", values, args)
+		}
 		if values[1] == 0 {
 			// Return 0 instead of error - indicator not ready yet
+			fmt.Printf("[DEBUG] divide by zero at bar %d: values[0]=%.4f, values[1]=%.4f\n", e.context.BarIndex, values[0], values[1])
 			return 0, nil
 		}
 		return values[0] / values[1], nil

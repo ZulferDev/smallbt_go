@@ -40,6 +40,7 @@ func (b *Broker) SubmitOrder(req order.OrderRequest, timestamp time.Time) (*orde
 
 	// Track pending order
 	b.pendingOrders[ord.ID] = ord
+	fmt.Printf("[BROKER] Submitted order ID=%s, quantity=%.2f, type=%s\n", ord.ID, ord.Quantity, ord.Type)
 
 	return ord, nil
 }
@@ -48,8 +49,11 @@ func (b *Broker) SubmitOrder(req order.OrderRequest, timestamp time.Time) (*orde
 func (b *Broker) ProcessPendingOrders(candle *market.Candle, timestamp time.Time) ([]string, error) {
 	var filledOrderIDs []string
 
+	fmt.Printf("[BROKER] ProcessPendingOrders: %d pending orders at candle %s (H=%.2f, L=%.2f)\n", len(b.pendingOrders), candle.Timestamp.Format("2006-01-02 15:04:05"), candle.High, candle.Low)
+
 	for orderID, ord := range b.pendingOrders {
 		// Try to fill the order
+		fmt.Printf("[BROKER] Attempting to fill order %s: side=%s, type=%s, qty=%.2f\n", orderID, ord.Side, ord.Type, ord.Quantity)
 		fill, err := b.executor.SimulateFill(order.OrderRequest{
 			Symbol:    ord.Symbol,
 			Side:      ord.Side,
@@ -61,6 +65,7 @@ func (b *Broker) ProcessPendingOrders(candle *market.Candle, timestamp time.Time
 
 		if err != nil {
 			// Order didn't fill, check if it should expire or remain pending
+			fmt.Printf("[BROKER] ERROR filling order %s: %v\n", orderID, err)
 			continue
 		}
 
