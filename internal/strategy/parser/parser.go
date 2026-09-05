@@ -36,7 +36,7 @@ func (p *Parser) Parse(data []byte) (*ast.Strategy, error) {
 		return nil, fmt.Errorf("parse YAML: %w", err)
 	}
 
-	log.Printf("[DEBUG PARSE] After YAML unmarshal: Execution.EntryOrderType='%s', Execution.ExitOrderType='%s'\n", 
+	log.Printf("[DEBUG PARSE] After YAML unmarshal: Execution.EntryOrderType='%s', Execution.ExitOrderType='%s'\n",
 		yamlStrat.Execution.EntryOrderType, yamlStrat.Execution.ExitOrderType)
 
 	log.Println("[DEBUG PARSE] Parse function CALLED")
@@ -330,7 +330,7 @@ func (p *Parser) parseArgs(args interface{}) ([]interface{}, error) {
 
 // parseExecutionConfig parses execution configuration.
 func (p *Parser) parseExecutionConfig(config YAMLExecutionConfig, strategy *ast.Strategy) error {
-	log.Printf("[DEBUG PARSER] parseExecutionConfig: EntryOrderType='%s', ExitOrderType='%s', FeeMaker=%f, FeeTaker=%f\n", 
+	log.Printf("[DEBUG PARSER] parseExecutionConfig: EntryOrderType='%s', ExitOrderType='%s', FeeMaker=%f, FeeTaker=%f\n",
 		config.EntryOrderType, config.ExitOrderType, config.FeeMaker, config.FeeTaker)
 	strategy.Execution.EntryOrderType = "market"
 	if config.EntryOrderType != "" {
@@ -386,8 +386,15 @@ func (p *Parser) parseRiskConfig(risk YAMLRiskConfig, strategy *ast.Strategy) er
 			switch val := v.(type) {
 			case float64:
 				ps.Value = val
+				// For risk_percent, also set RiskPercent field
+				if ps.Type == "risk_percent" {
+					ps.RiskPercent = val
+				}
 			case int:
 				ps.Value = float64(val)
+				if ps.Type == "risk_percent" {
+					ps.RiskPercent = float64(val)
+				}
 			}
 		}
 		strategy.Risk.PositionSize = ps
@@ -407,6 +414,12 @@ func (p *Parser) parseRiskConfig(risk YAMLRiskConfig, strategy *ast.Strategy) er
 		if v, ok := risk.StopLoss["percentage"]; ok {
 			if val, ok := v.(float64); ok {
 				sl.Percentage = val
+			}
+		}
+		// Support "value" as alias for "percentage"
+		if v, ok := risk.StopLoss["value"]; ok {
+			if val, ok := v.(float64); ok {
+				sl.Percentage = val * 100 // Convert 0.02 to 2.0
 			}
 		}
 		if v, ok := risk.StopLoss["indicator"]; ok {

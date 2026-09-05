@@ -11,24 +11,26 @@ import (
 
 // Evaluator evaluates a strategy against market data.
 type Evaluator struct {
-	strategy        *ast.Strategy
-	registry        *indicator.Registry
-	indicators      map[string]indicator.Indicator
-	context         *indicator.Context
-	values          map[string]float64     // Current indicator values
-	prevValues      map[string]float64     // Previous indicator values for cross detection
-	candles         []market.Candle        // Historical candles
-	state           map[string]interface{} // Strategy state variables
+	strategy      *ast.Strategy
+	registry      *indicator.Registry
+	indicators    map[string]indicator.Indicator
+	context       *indicator.Context
+	values        map[string]float64     // Current indicator values
+	prevValues    map[string]float64     // Previous indicator values for cross detection
+	candles       []market.Candle        // Historical candles
+	validityFlags map[string]bool        // Track indicator validity
+	state         map[string]interface{} // Strategy state variables
 }
 
 // NewEvaluator creates a new strategy evaluator.
 func NewEvaluator(strat *ast.Strategy, registry *indicator.Registry, symbol market.Symbol, timeframe market.Timeframe) *Evaluator {
 	e := &Evaluator{
-		strategy:   strat,
-		registry:   registry,
-		indicators: make(map[string]indicator.Indicator),
-		values:     make(map[string]float64),
-		prevValues: make(map[string]float64),
+		strategy:      strat,
+		registry:      registry,
+		indicators:    make(map[string]indicator.Indicator),
+		values:        make(map[string]float64),
+		prevValues:    make(map[string]float64),
+		validityFlags: make(map[string]bool),
 		context: &indicator.Context{
 			Symbol:          symbol,
 			Timeframe:       timeframe,
@@ -156,10 +158,10 @@ func (ci *compositeIndicator) Calculate(ctx *indicator.Context) (indicator.Value
 
 	// Use the composite operation type as function name
 	if ci.eval.context.BarIndex == 0 {
-		fmt.Printf("[DEBUG] Composite indicator '%s': type=%s, left=%s, right=%s, args=%v\n", 
+		fmt.Printf("[DEBUG] Composite indicator '%s': type=%s, left=%s, right=%s, args=%v\n",
 			ci.name, ci.def.Type, ci.def.Left, ci.def.Right, args)
 	}
-	
+
 	value, err := ci.eval.EvaluateExpression(ci.def.Type, args)
 	if err != nil {
 		return indicator.Value{}, fmt.Errorf("evaluate composite indicator %s: %w", ci.name, err)
@@ -216,6 +218,7 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 			return fmt.Errorf("calculate indicator %s: %w", name, err)
 		}
 		e.context.IndicatorValues[name] = value
+		e.validityFlags[name] = value.Valid
 		if value.Valid {
 			e.values[name] = value.Value
 			if barIndex < 25 && (name == "volume_avg" || name == "ema_fast" || name == "ema_slow") {
@@ -237,7 +240,7 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 			compositeNames = append(compositeNames, name)
 		}
 	}
-	
+
 	if barIndex == 0 {
 		fmt.Printf("[DEBUG] Found %d composite indicators: %v\n", len(compositeNames), compositeNames)
 	}
@@ -248,7 +251,7 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 		fmt.Printf("[DEBUG] Error sorting composite indicators: %v\n", err)
 		return fmt.Errorf("sort composite indicators: %w", err)
 	}
-	
+
 	if barIndex == 0 {
 		fmt.Printf("[DEBUG] Sorted composite indicators: %v\n", sortedCompositeNames)
 	}
@@ -275,13 +278,13 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 			e.values[name] = 0
 			fmt.Printf("[DEBUG] Bar %d: Composite indicator '%s' is invalid, stored 0\n", barIndex, name)
 		}
-		
+
 		if e.context.BarIndex == 0 {
 			fmt.Printf("[DEBUG] Bar %d: About to calculate composite indicator '%s'\n", barIndex, name)
 			fmt.Printf("[DEBUG] Bar %d: Stored composite indicator '%s' value: %.4f\n", barIndex, name, e.values[name])
 		}
 	}
-	
+
 	fmt.Printf("[DEBUG] Bar %d: After composite indicator loop: volume_ratio=%v\n", barIndex, e.values["volume_ratio"])
 	fmt.Printf("[DEBUG] Bar %d: UpdateCandle END\n", barIndex)
 
@@ -302,7 +305,7 @@ func (e *Evaluator) Evaluate(hasPosition bool, positionSide string) ([]signal.Si
 
 	// DEBUG: Log when evaluate is called
 	fmt.Printf("[DEBUG] Bar %d: Evaluate START\n", barIndex)
-	fmt.Printf("[EVALUATE] candle=%d, hasPosition=%v, positionSide=%s, indicators=%d\n", 
+	fmt.Printf("[EVALUATE] candle=%d, hasPosition=%v, positionSide=%s, indicators=%d\n",
 		len(e.candles), hasPosition, positionSide, len(e.prevValues))
 
 	// Evaluate entry conditions
@@ -310,22 +313,29 @@ func (e *Evaluator) Evaluate(hasPosition bool, positionSide string) ([]signal.Si
 		// Check long entry
 		if e.strategy.Entry.Long != nil {
 			fmt.Printf("[EVALUATE] Checking long entry condition\n")
-			shouldEntry := e.evaluateCondition(e.strategy.Entry.Long)
-			fmt.Printf("[EVALUATE] Long entry result: %v\n", shouldEntry)
-			if shouldEntry {
-				signals = append(signals, signal.Signal{
-					Type:      signal.SignalTypeLongEntry,
-					Timestamp: currentCandle.Timestamp,
-					Price:     currentCandle.Close,
-					Reason:    "long entry signal",
-				})
-				fmt.Printf("[SIGNAL] Generated long entry signal at bar %d, price=%.2f\n", len(e.candles), currentCandle.Close)
+			// Extract required indicators and check validity
+			requiredIndicators := e.extractIndicatorNames(e.strategy.Entry.Long)
+			if !e.AreIndicatorsValid(requiredIndicators) {
+				fmt.Printf("[EVALUATE] Long entry skipped: indicators not valid yet. Required: %v\n", requiredIndicators)
+			} else {
+				shouldEntry := e.evaluateCondition(e.strategy.Entry.Long)
+				fmt.Printf("[EVALUATE] Long entry result: %v\n", shouldEntry)
+				if shouldEntry {
+					signals = append(signals, signal.Signal{
+						Type:      signal.SignalTypeLongEntry,
+						Timestamp: currentCandle.Timestamp,
+						Price:     currentCandle.Close,
+						Reason:    "long entry signal",
+					})
+					fmt.Printf("[SIGNAL] Generated long entry signal at bar %d, price=%.2f\n", len(e.candles), currentCandle.Close)
+				}
 			}
 		}
 
 		// Check short entry
 		if e.strategy.Entry.Short != nil {
-			if e.evaluateCondition(e.strategy.Entry.Short) {
+			requiredIndicators := e.extractIndicatorNames(e.strategy.Entry.Short)
+			if e.AreIndicatorsValid(requiredIndicators) && e.evaluateCondition(e.strategy.Entry.Short) {
 				signals = append(signals, signal.Signal{
 					Type:      signal.SignalTypeShortEntry,
 					Timestamp: currentCandle.Timestamp,
@@ -426,7 +436,7 @@ func (e *Evaluator) evaluateFunction(fn string, args []interface{}) bool {
 	}
 
 	switch fn {
-case "gt":
+	case "gt":
 		return values[0] > values[1]
 	case "lt":
 		return values[0] < values[1]
@@ -623,6 +633,16 @@ func (e *Evaluator) resolveValue(arg interface{}) (float64, error) {
 // GetIndicatorValues returns current indicator values.
 func (e *Evaluator) GetIndicatorValues() map[string]float64 {
 	return e.values
+}
+
+// AreIndicatorsValid checks if all named indicators are valid
+func (e *Evaluator) AreIndicatorsValid(indicatorNames []string) bool {
+	for _, name := range indicatorNames {
+		if !e.validityFlags[name] {
+			return false
+		}
+	}
+	return true
 }
 
 // GetCandleCount returns the number of candles processed.
@@ -889,4 +909,34 @@ func (e *Evaluator) resolveValueAt(arg interface{}, barIndex int) (float64, erro
 	default:
 		return 0, fmt.Errorf("cannot resolve value: %v", arg)
 	}
+}
+
+// extractIndicatorNames recursively extracts all indicator names from a condition
+func (e *Evaluator) extractIndicatorNames(cond *ast.Condition) []string {
+	if cond == nil {
+		return nil
+	}
+
+	names := []string{}
+
+	switch cond.Type {
+	case "all", "any", "not":
+		for _, c := range cond.Conditions {
+			names = append(names, e.extractIndicatorNames(c)...)
+		}
+	case "func":
+		// Extract indicator names from function arguments
+		for _, arg := range cond.Args {
+			if strArg, ok := arg.(string); ok {
+				// Check if it's an indicator name
+				if _, exists := e.indicators[strArg]; exists {
+					names = append(names, strArg)
+					fmt.Printf("[DEBUG] extractIndicatorNames: found indicator '%s' from func arg\n", strArg)
+				}
+			}
+		}
+	}
+
+	fmt.Printf("[DEBUG] extractIndicatorNames: returning %v\n", names)
+	return names
 }

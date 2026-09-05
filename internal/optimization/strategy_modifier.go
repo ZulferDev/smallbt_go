@@ -30,7 +30,7 @@ func (m *YAMLModifier) ModifyStrategy(strategy *ast.Strategy, parameterSet Param
 	for paramName, paramValue := range parameterSet.Values {
 		// Parse the path (e.g., "indicators.ema_fast.period")
 		pathParts := strings.Split(paramName, ".")
-		
+
 		if len(pathParts) < 3 {
 			return nil, fmt.Errorf("invalid parameter path format: %s (expected format: 'indicators.name.field')", paramName)
 		}
@@ -147,7 +147,7 @@ func (m *YAMLModifier) applyParameterModifications(strategyMap map[string]interf
 	for paramName, paramValue := range parameterSet.Values {
 		// Parse path
 		pathParts := strings.Split(paramName, ".")
-		
+
 		if len(pathParts) < 3 {
 			continue // skip invalid paths
 		}
@@ -158,7 +158,7 @@ func (m *YAMLModifier) applyParameterModifications(strategyMap map[string]interf
 
 		// Navigate through the map
 		current := result
-		
+
 		// Find category (e.g., "indicators")
 		categoryMap, ok := current[category].(map[string]interface{})
 		if !ok {
@@ -324,9 +324,9 @@ func (m *YAMLModifier) GetTempFileName(baseName string, paramSet ParameterSet) s
 	if hash == "" {
 		hash = "default"
 	}
-	
+
 	ext := filepath.Ext(baseName)
 	name := strings.TrimSuffix(baseName, ext)
-	
+
 	return fmt.Sprintf("%s_%s%s", name, hash[:8], ext)
 }

@@ -74,51 +74,51 @@ EXAMPLES:
 func runValidate(args []string) error {
 	fs := flag.NewFlagSet("validate", flag.ExitOnError)
 	strategyPath := fs.String("strategy", "", "Path to strategy YAML file")
-	
+
 	// Parse flags
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
 	}
-	
+
 	if *strategyPath == "" {
 		// Try to use first positional argument
 		if len(fs.Args()) > 0 {
 			*strategyPath = fs.Arg(0)
 		}
 	}
-	
+
 	if *strategyPath == "" {
 		return fmt.Errorf("strategy file path required")
 	}
-	
+
 	// Parse and validate strategy
 	parser := parser.NewParser()
 	strategy, err := parser.ParseFile(*strategyPath)
 	if err != nil {
 		return fmt.Errorf("validate strategy: %w", err)
 	}
-	
+
 	// Basic validation
 	if strategy.Name == "" {
 		fmt.Println("⚠️  Warning: Strategy name is empty")
 	}
-	
+
 	if strategy.Data.Symbol == "" {
 		fmt.Println("⚠️  Warning: Data symbol not specified")
 	}
-	
+
 	if len(strategy.Indicators) == 0 {
 		fmt.Println("⚠️  Warning: No indicators defined")
 	}
-	
+
 	if strategy.Entry.Long == nil && strategy.Entry.Short == nil {
 		fmt.Println("⚠️  Warning: No entry rules defined (long or short)")
 	}
-	
+
 	fmt.Printf("✅ Strategy '%s' (v%s) validated successfully\n", strategy.Name, strategy.Version)
 	fmt.Printf("   Symbol: %s, Timeframe: %s\n", strategy.Data.Symbol, strategy.Data.Timeframe)
 	fmt.Printf("   Indicators: %d\n", len(strategy.Indicators))
-	
+
 	// Count entry rules
 	entryRules := 0
 	if strategy.Entry.Long != nil {
@@ -128,12 +128,12 @@ func runValidate(args []string) error {
 		entryRules++
 	}
 	fmt.Printf("   Entry rules: %d\n", entryRules)
-	
+
 	// Show indicators
 	for name, indicator := range strategy.Indicators {
 		fmt.Printf("   - %s: %s (period: %d)\n", name, indicator.Type, indicator.Period)
 	}
-	
+
 	return nil
 }
 
@@ -147,11 +147,11 @@ func runBacktest(args []string) error {
 	timeframe := fs.String("timeframe", "1h", "Timeframe (e.g., 1m, 5m, 15m, 30m, 1h, 4h, 1d)")
 	startDate := fs.String("start", "", "Start date (YYYY-MM-DD)")
 	endDate := fs.String("end", "", "End date (YYYY-MM-DD)")
-	
+
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
 	}
-	
+
 	// Validate required flags
 	if *strategyPath == "" {
 		return fmt.Errorf("strategy file required (--strategy)")
@@ -170,7 +170,7 @@ func runBacktest(args []string) error {
 	if *symbol == "" {
 		return fmt.Errorf("symbol required (--symbol or in strategy)")
 	}
-	
+
 	// Create config
 	config := backtest.BacktestConfig{
 		Symbol:       market.Symbol(*symbol),
@@ -179,7 +179,7 @@ func runBacktest(args []string) error {
 		StrategyPath: *strategyPath,
 		DataPath:     *dataPath,
 	}
-	
+
 	// Parse dates if provided
 	if *startDate != "" {
 		startTime, err := time.Parse("2006-01-02", *startDate)
@@ -195,7 +195,7 @@ func runBacktest(args []string) error {
 		}
 		config.EndTime = endTime
 	}
-	
+
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println("Running backtest...")
 	fmt.Printf("Strategy: %s\n", *strategyPath)
@@ -203,7 +203,7 @@ func runBacktest(args []string) error {
 	fmt.Printf("Symbol:   %s\n", *symbol)
 	fmt.Printf("Cash:     $%.2f\n", *initialCash)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	
+
 	// Run backtest
 	start := time.Now()
 	result, err := backtest.Run(config)
@@ -211,7 +211,7 @@ func runBacktest(args []string) error {
 		return fmt.Errorf("backtest execution failed: %w", err)
 	}
 	elapsed := time.Since(start)
-	
+
 	// Display results
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println("BACKTEST RESULT")
@@ -222,25 +222,25 @@ func runBacktest(args []string) error {
 	fmt.Printf("Period         %s → %s\n", result.StartTime.Format("2006-01-02"), result.EndTime.Format("2006-01-02"))
 	fmt.Printf("Runtime        %v\n", elapsed)
 	fmt.Println()
-	
+
 	fmt.Printf("Return         %+.2f%%\n", result.Metrics.TotalReturn*100)
 	fmt.Printf("CAGR           %+.2f%%\n", result.Metrics.CAGR*100)
 	fmt.Printf("Sharpe         %.2f\n", result.Metrics.SharpeRatio)
 	fmt.Printf("Sortino        %.2f\n", result.Metrics.SortinoRatio)
 	fmt.Printf("Max Drawdown   %.2f%%\n", result.Metrics.MaxDrawdown*100)
 	fmt.Println()
-	
+
 	fmt.Printf("Trades         %d\n", result.TotalTrades)
 	fmt.Printf("Win Rate       %.2f%%\n", result.Metrics.WinRate*100)
 	fmt.Printf("Profit Factor  %.2f\n", result.Metrics.ProfitFactor)
 	fmt.Printf("Expectancy     %.2fR\n", result.Metrics.Expectancy)
 	fmt.Println()
-	
+
 	fmt.Printf("Final Equity   $%.2f\n", result.Portfolio.Equity)
 	fmt.Printf("Total Fees     $%.2f\n", result.Metrics.TotalFees)
-	fmt.Printf("Net PnL        $%.2f\n", result.Portfolio.Equity - result.Config.InitialCash)
+	fmt.Printf("Net PnL        $%.2f\n", result.Portfolio.Equity-result.Config.InitialCash)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	
+
 	// Save to JSON
 	if *outputJSON != "" {
 		jsonBytes, err := json.MarshalIndent(result, "", "  ")
@@ -252,7 +252,7 @@ func runBacktest(args []string) error {
 		}
 		fmt.Printf("Results saved to %s\n", *outputJSON)
 	}
-	
+
 	return nil
 }
 
@@ -269,12 +269,12 @@ func runOptimize(args []string) error {
 	objective := fs.String("objective", "sharpe", "Optimization objective (sharpe, sortino, return, profit_factor)")
 	direction := fs.String("direction", "maximize", "Optimization direction (maximize or minimize)")
 	parallel := fs.Int("parallel", 1, "Number of parallel workers (1 = sequential)")
-	
+
 	// Parse flags
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
 	}
-	
+
 	if *strategyPath == "" {
 		return fmt.Errorf("--strategy flag required")
 	}
@@ -284,31 +284,31 @@ func runOptimize(args []string) error {
 	if *parameters == "" {
 		return fmt.Errorf("--parameters flag required (format: name:start:end:step)")
 	}
-	
+
 	// Parse parameter ranges
 	paramRanges, err := parseParameterRanges(*parameters)
 	if err != nil {
 		return fmt.Errorf("parse parameter ranges: %w", err)
 	}
-	
+
 	// Parse strategy to get timeframe
 	p := parser.NewParser()
 	strategyAST, err := p.ParseFile(*strategyPath)
 	if err != nil {
 		return fmt.Errorf("parse strategy: %w", err)
 	}
-	
+
 	// Create optimization config
 	config := optimization.OptimizationConfig{
 		StrategyPath: *strategyPath,
 		BacktestConfig: backtest.BacktestConfig{
-			Symbol:      market.Symbol(*symbol),
-			Timeframe:   market.Timeframe(strategyAST.Data.Timeframe),
-			InitialCash: *initialCash,
-			StartTime:   time.Time{},
-			EndTime:     time.Now(),
+			Symbol:       market.Symbol(*symbol),
+			Timeframe:    market.Timeframe(strategyAST.Data.Timeframe),
+			InitialCash:  *initialCash,
+			StartTime:    time.Time{},
+			EndTime:      time.Now(),
 			StrategyPath: *strategyPath,
-			DataPath:    *dataPath,
+			DataPath:     *dataPath,
 		},
 		Parameters: paramRanges,
 		Objective: optimization.ObjectiveConfig{
@@ -317,7 +317,7 @@ func runOptimize(args []string) error {
 		},
 		Algorithm: "grid",
 	}
-	
+
 	// Parse dates
 	if *startDate != "" {
 		startTime, err := time.Parse("2006-01-02", *startDate)
@@ -333,7 +333,7 @@ func runOptimize(args []string) error {
 		}
 		config.BacktestConfig.EndTime = endTime
 	}
-	
+
 	// Display optimization info
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println("PARAMETER OPTIMIZATION")
@@ -347,19 +347,19 @@ func runOptimize(args []string) error {
 	for _, p := range paramRanges {
 		fmt.Printf("  - %s: [%.2f to %.2f, step %.2f]\n", p.Name, p.Start, p.End, p.Step)
 	}
-	
+
 	// Create optimizer
 	gridSearch := optimization.NewGridSearch(config)
-	
+
 	// Estimate total combinations
 	totalCombinations := gridSearch.EstimateTotalCombinations()
 	fmt.Printf("\nTotal Combinations: %d\n", totalCombinations)
 	fmt.Printf("Parallel Workers:   %d\n", *parallel)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	
+
 	// Run optimization
 	start := time.Now()
-	
+
 	evaluator := func(paramSet optimization.ParameterSet) (*backtest.BacktestResult, error) {
 		// Create modified strategy for this parameter set
 		modifier := optimization.NewYAMLModifier()
@@ -368,7 +368,7 @@ func runOptimize(args []string) error {
 			return nil, fmt.Errorf("modify strategy: %w", err)
 		}
 		defer os.Remove(modifiedPath) // Clean up temp file
-		
+
 		// Run backtest with modified strategy
 		btConfig := backtest.BacktestConfig{
 			Symbol:       config.BacktestConfig.Symbol,
@@ -379,21 +379,21 @@ func runOptimize(args []string) error {
 			StrategyPath: modifiedPath,
 			DataPath:     config.BacktestConfig.DataPath,
 		}
-		
+
 		return backtest.Run(btConfig)
 	}
-	
+
 	report, err := gridSearch.Run(evaluator, *parallel)
 	if err != nil {
 		return fmt.Errorf("optimization failed: %w", err)
 	}
-	
+
 	elapsed := time.Since(start)
-	
+
 	// Display results
 	fmt.Println(report.GenerateReport())
 	fmt.Printf("\nOptimization completed in %v\n", elapsed)
-	
+
 	// Save to JSON
 	if *outputJSON != "" {
 		if err := report.SaveJSON(*outputJSON); err != nil {
@@ -401,7 +401,7 @@ func runOptimize(args []string) error {
 		}
 		fmt.Printf("Results saved to %s\n", *outputJSON)
 	}
-	
+
 	return nil
 }
 
@@ -410,14 +410,14 @@ func runOptimize(args []string) error {
 // Example: "indicators.ema_fast.period:5:20:1,indicators.ema_slow.period:20:100:5"
 func parseParameterRanges(input string) ([]optimization.ParameterRange, error) {
 	var ranges []optimization.ParameterRange
-	
+
 	parts := strings.Split(input, ",")
 	for _, part := range parts {
 		fields := strings.Split(part, ":")
 		if len(fields) != 4 {
 			return nil, fmt.Errorf("invalid parameter format '%s' (expected name:start:end:step)", part)
 		}
-		
+
 		name := fields[0]
 		start, err := strconv.ParseFloat(fields[1], 64)
 		if err != nil {
@@ -431,13 +431,13 @@ func parseParameterRanges(input string) ([]optimization.ParameterRange, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid step value for %s: %w", name, err)
 		}
-		
+
 		// Determine type (int or float)
 		paramType := "float"
 		if step == float64(int(step)) && start == float64(int(start)) && end == float64(int(end)) {
 			paramType = "int"
 		}
-		
+
 		// Path is same as name for now
 		ranges = append(ranges, optimization.ParameterRange{
 			Name:  name,
@@ -448,7 +448,7 @@ func parseParameterRanges(input string) ([]optimization.ParameterRange, error) {
 			Path:  name,
 		})
 	}
-	
+
 	return ranges, nil
 }
 

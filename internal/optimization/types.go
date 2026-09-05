@@ -7,12 +7,12 @@ import (
 
 // ParameterRange defines the range for a parameter to optimize.
 type ParameterRange struct {
-	Name  string        `json:"name"`
-	Start float64       `json:"start"`
-	End   float64       `json:"end"`
-	Step  float64       `json:"step"`
-	Type  string        `json:"type"` // "int" or "float"
-	Path  string        `json:"path"` // e.g., "indicators.ema_fast.period"
+	Name  string  `json:"name"`
+	Start float64 `json:"start"`
+	End   float64 `json:"end"`
+	Step  float64 `json:"step"`
+	Type  string  `json:"type"` // "int" or "float"
+	Path  string  `json:"path"` // e.g., "indicators.ema_fast.period"
 }
 
 // OptimizationConfig defines the optimization parameters and objectives.
@@ -58,15 +58,15 @@ type OptimizationResult struct {
 
 // OptimizationReport contains aggregated results from optimization run.
 type OptimizationReport struct {
-	Strategy          string
-	Symbol            string
-	Timeframe         string
-	StartTime         string
-	EndTime           string
-	TotalRuns         int
-	ObjectiveMetric   string
+	Strategy           string
+	Symbol             string
+	Timeframe          string
+	StartTime          string
+	EndTime            string
+	TotalRuns          int
+	ObjectiveMetric    string
 	ObjectiveDirection string
-	Algorithm         string
+	Algorithm          string
 
 	// All results sorted by objective metric
 	Results []*OptimizationResult

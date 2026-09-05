@@ -69,12 +69,12 @@ type YAMLStateDef struct {
 
 // YAMLExecutionConfig defines execution behavior.
 type YAMLExecutionConfig struct {
-	EntryOrderType  string  `yaml:"entry_order_type"`
-	ExitOrderType   string  `yaml:"exit_order_type"`
-	SlippageType    string  `yaml:"slippage_type"`
-	SlippageValue   float64 `yaml:"slippage_value"`
-	FeeMaker        float64 `yaml:"fee_maker"`
-	FeeTaker        float64 `yaml:"fee_taker"`
-	Spread          float64 `yaml:"spread"`
-	IntrabarPolicy  string  `yaml:"intrabar_policy"`
+	EntryOrderType string  `yaml:"entry_order_type"`
+	ExitOrderType  string  `yaml:"exit_order_type"`
+	SlippageType   string  `yaml:"slippage_type"`
+	SlippageValue  float64 `yaml:"slippage_value"`
+	FeeMaker       float64 `yaml:"fee_maker"`
+	FeeTaker       float64 `yaml:"fee_taker"`
+	Spread         float64 `yaml:"spread"`
+	IntrabarPolicy string  `yaml:"intrabar_policy"`
 }

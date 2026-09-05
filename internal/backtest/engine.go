@@ -51,8 +51,6 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 		return nil, fmt.Errorf("no candles after filtering")
 	}
 
-
-
 	// Step 3: Initialize components
 	registry := indicator.NewRegistry()
 	registry = indicator.BuiltinRegistry()
@@ -461,15 +459,22 @@ func runBacktestLoop(
 						atrValue := 0.0
 						if strategyAST.Risk.StopLoss != nil && strategyAST.Risk.StopLoss.Type == "atr" && strategyAST.Risk.StopLoss.Indicator != "" {
 							indicatorValues := evaluator.GetIndicatorValues()
+							fmt.Fprintf(os.Stderr, "[ENGINE] Indicator values: %v\n", indicatorValues)
 							if val, ok := indicatorValues[strategyAST.Risk.StopLoss.Indicator]; ok {
 								atrValue = val
 							}
+							fmt.Fprintf(os.Stderr, "[ENGINE] ATR stop loss: indicator=%s atrValue=%.4f multiplier=%.2f\n",
+								strategyAST.Risk.StopLoss.Indicator, atrValue, strategyAST.Risk.StopLoss.Multiplier)
 						}
 						// Estimate stop distance for position sizing
 						var err error
 						sl, err = stopLossCalc.Calculate(candle.Close, "long", atrValue)
 						if err == nil && sl > 0 {
 							stopDist = absPrice(candle.Close - sl)
+							fmt.Fprintf(os.Stderr, "[ENGINE] Stop loss calculated: close=%.2f sl=%.2f stopDist=%.2f\n",
+								candle.Close, sl, stopDist)
+						} else if err != nil {
+							fmt.Fprintf(os.Stderr, "[ENGINE] Stop loss calc error: %v\n", err)
 						}
 					}
 					if positionSizer != nil {
@@ -481,7 +486,10 @@ func runBacktestLoop(
 								slPrice = candle.Close - stopDist
 							}
 						}
+						fmt.Fprintf(os.Stderr, "[ENGINE] Position sizing: equity=%.2f entry=%.2f slPrice=%.2f type=%s\n",
+							portfolioInstance.Equity, candle.Close, slPrice, strategyAST.Risk.PositionSize.Type)
 						qty, err := positionSizer.CalculateQuantity(candle.Close, portfolioInstance.Equity, slPrice)
+						fmt.Fprintf(os.Stderr, "[ENGINE] Position sizing result: qty=%.6f err=%v\n", qty, err)
 						if err == nil && qty > 0 {
 							quantity = qty
 						}

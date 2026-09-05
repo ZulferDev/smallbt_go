@@ -1,0 +1,53 @@
+strategy:
+  name: test_risk_management
+  version: "1"
+  description: Test risk management features
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  ema_fast:
+    type: ema
+    source: close
+    period: 9
+
+  ema_slow:
+    type: ema
+    source: close
+    period: 21
+
+  atr:
+    type: atr
+    period: 14
+
+entry:
+  long:
+    all:
+      - cross_above: [ema_fast, ema_slow]
+
+exit:
+  long:
+    any:
+      - cross_below: [ema_fast, ema_slow]
+
+risk:
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: atr
+    indicator: atr
+    multiplier: 1.5
+
+  take_profit:
+    type: risk_reward
+    ratio: 2.0
+
+execution:
+  entry_order_type: market
+  exit_order_type: market
+  slippage_type: percentage
+  slippage_value: 0.0005

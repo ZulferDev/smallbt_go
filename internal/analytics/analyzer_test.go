@@ -32,10 +32,10 @@ func TestAnalyzerTotalReturn(t *testing.T) {
 	analyzer := NewAnalyzer()
 	now := time.Now()
 	input := AnalysisInput{
-		InitialCash:  10000,
-		FinalEquity:  12000,
-		StartTime:    now.AddDate(-1, 0, 0),
-		EndTime:      now,
+		InitialCash: 10000,
+		FinalEquity: 12000,
+		StartTime:   now.AddDate(-1, 0, 0),
+		EndTime:     now,
 		TradeHistory: []portfolio.Trade{
 			{NetPnL: 2000},
 		},
