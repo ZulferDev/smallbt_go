@@ -309,3 +309,113 @@ Built according to the comprehensive architectural specification in AGENTS.md, w
 ---
 
 **Ready for quantitative trading research that prioritizes correctness over convenience.**
+
+---
+
+## 📊 Paper Trading
+
+**Status:** ✅ Production Ready (Phase 16)
+
+Paper trading simulates real-time execution without risking real capital. Perfect for strategy validation before live deployment.
+
+### Quick Start
+
+```bash
+# Static price simulation
+trader paper --strategy strategies/examples/paper_ema_cross.yaml \
+             --symbol BTCUSDT \
+             --price 50000 \
+             --duration 60
+
+# Real-time WebSocket data
+trader paper --strategy strategies/examples/paper_ema_cross.yaml \
+             --symbol BTCUSDT \
+             --websocket ws://localhost:8080 \
+             --duration 300
+```
+
+### Features
+
+- ✅ **Realistic latency simulation** (50-200ms)
+- ✅ **WebSocket real-time data feed**
+- ✅ **Portfolio tracking** (cash, equity, positions)
+- ✅ **Same strategy YAML as backtesting**
+- ✅ **Order lifecycle simulation**
+- ✅ **Real-time status updates**
+
+### Example Output
+
+```
+Starting paper trading...
+Strategy: paper_ema_cross
+Symbol: BTCUSDT
+WebSocket: ws://localhost:8080
+
+Connected to WebSocket
+Subscribing to: BTCUSDT
+
+[Candle 1] 15:26:25 | O:50000.00 H:50100.00 L:49900.00 C:50050.00 V:1500.00
+[Candle 2] 15:26:30 | O:50050.00 H:50150.00 L:50000.00 C:50100.00 V:1200.00
+
+[5s] Balance: 10000.00 | Equity: 10000.00 | Positions: 0 | Candles: 2
+```
+
+### CLI Flags
+
+| Flag | Description | Default | Example |
+|------|-------------|---------|---------|
+| `--strategy` | Strategy YAML file | *required* | `--strategy ema.yaml` |
+| `--symbol` | Trading symbol | BTCUSDT | `--symbol ETHUSDT` |
+| `--price` | Initial price (static mode) | 50000.0 | `--price 45000` |
+| `--balance` | Initial balance | 10000.0 | `--balance 50000` |
+| `--duration` | Duration in seconds | 60 | `--duration 300` |
+| `--websocket` | WebSocket URL (optional) | - | `--websocket ws://localhost:8080` |
+
+### WebSocket Protocol
+
+Paper trading expects JSON messages with OHLCV candle data:
+
+```json
+{
+  "timestamp": 1609459200,
+  "open": 50000.0,
+  "high": 50100.0,
+  "low": 49900.0,
+  "close": 50050.0,
+  "volume": 1000.0
+}
+```
+
+**See:** [Paper Trading Guide](docs/PAPER_TRADING_GUIDE.md) for detailed documentation.
+
+### Architecture
+
+```
+WebSocket Server
+    ↓
+WebSocketFeed (Week 3)
+    ↓
+Subscribe() → candle channel
+    ↓
+PaperBroker (Week 2)
+    ↓
+Order Queue + Latency Simulation
+    ↓
+Portfolio Updates
+```
+
+**Components:**
+- **WebSocketFeed:** Real-time data connection with auto-reconnection
+- **PaperBroker:** Order execution simulation with realistic latency
+- **Portfolio:** Balance and position tracking
+- **Order Queue:** Asynchronous order processing
+
+### Workflow
+
+1. **Backtest** your strategy with historical data
+2. **Paper trade** with WebSocket real-time data
+3. **Review results** and iterate
+4. **Deploy to live** trading (Phase 17+)
+
+---
+

@@ -1,0 +1,58 @@
+# Example Paper Trading Strategy: EMA Cross
+# 
+# This strategy demonstrates paper trading with WebSocket real-time data.
+# It uses a simple EMA crossover for entry/exit signals.
+#
+# Usage:
+#   trader paper --strategy strategies/examples/paper_ema_cross.yaml \
+#                --symbol BTCUSDT \
+#                --websocket ws://localhost:8080 \
+#                --duration 300
+
+strategy:
+  name: paper_ema_cross
+  version: "1.0"
+  description: "EMA crossover strategy for paper trading with WebSocket"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  ema_fast:
+    type: ema
+    source: close
+    period: 9
+
+  ema_slow:
+    type: ema
+    source: close
+    period: 21
+
+  atr:
+    type: atr
+    period: 14
+
+entry:
+  long:
+    all:
+      - cross_above: [ema_fast, ema_slow]
+
+exit:
+  long:
+    any:
+      - cross_below: [ema_fast, ema_slow]
+
+risk:
+  position_size:
+    type: risk_percent
+    value: 0.02  # Risk 2% per trade
+
+  stop_loss:
+    type: atr
+    period: 14
+    multiplier: 2.0
+
+  take_profit:
+    type: risk_reward
+    ratio: 3.0
