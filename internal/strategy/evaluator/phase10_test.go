@@ -1,4 +1,4 @@
-package evaluator
+package evaluator_test
 
 import (
 	"testing"
@@ -7,6 +7,7 @@ import (
 	"github.com/1jehuang/backtest/internal/indicator"
 	"github.com/1jehuang/backtest/internal/market"
 	"github.com/1jehuang/backtest/internal/strategy/ast"
+	"github.com/1jehuang/backtest/internal/strategy/evaluator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +35,7 @@ func TestMultiTimeframeIndicator(t *testing.T) {
 	}
 
 	registry := indicator.BuiltinRegistry()
-	eval := NewEvaluator(strategy, registry, market.Symbol("BTCUSDT"), market.Timeframe("1h"))
+	eval := evaluator.NewEvaluator(strategy, registry, market.Symbol("BTCUSDT"), market.Timeframe("1h"))
 
 	err := eval.Initialize()
 	require.NoError(t, err)
@@ -124,7 +125,7 @@ func TestMTFStrategyDefinition(t *testing.T) {
 	}
 
 	registry := indicator.BuiltinRegistry()
-	eval := NewEvaluator(strategy, registry, market.Symbol("BTCUSDT"), market.Timeframe("1h"))
+	eval := evaluator.NewEvaluator(strategy, registry, market.Symbol("BTCUSDT"), market.Timeframe("1h"))
 
 	err := eval.Initialize()
 	require.NoError(t, err)
@@ -154,7 +155,7 @@ func TestMultipleTimeframesInSameStrategy(t *testing.T) {
 	}
 
 	registry := indicator.BuiltinRegistry()
-	eval := NewEvaluator(strategy, registry, market.Symbol("ETHUSDT"), market.Timeframe("15m"))
+	eval := evaluator.NewEvaluator(strategy, registry, market.Symbol("ETHUSDT"), market.Timeframe("15m"))
 
 	err := eval.Initialize()
 	require.NoError(t, err)
