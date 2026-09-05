@@ -162,6 +162,23 @@ func (ci *compositeIndicator) Calculate(ctx *indicator.Context) (indicator.Value
 			ci.name, ci.def.Type, ci.def.Left, ci.def.Right, args)
 	}
 
+	// Check if all dependency indicators are valid before calculating
+	for _, arg := range args {
+		if argStr, ok := arg.(string); ok {
+			// Check if this is an indicator reference
+			if _, exists := ci.eval.indicators[argStr]; exists {
+				// Check validity
+				if !ci.eval.validityFlags[argStr] {
+					if ci.eval.context.BarIndex < 25 {
+						fmt.Printf("[DEBUG] Bar %d: Composite indicator '%s' invalid: dependency '%s' not ready\n",
+							ci.eval.context.BarIndex, ci.name, argStr)
+					}
+					return indicator.Value{Valid: false}, nil
+				}
+			}
+		}
+	}
+
 	value, err := ci.eval.EvaluateExpression(ci.def.Type, args)
 	if err != nil {
 		return indicator.Value{}, fmt.Errorf("evaluate composite indicator %s: %w", ci.name, err)
@@ -271,6 +288,7 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 			return fmt.Errorf("calculate indicator %s: %w", name, err)
 		}
 		e.context.IndicatorValues[name] = value
+		e.validityFlags[name] = value.Valid
 		if value.Valid {
 			e.values[name] = value.Value
 			fmt.Printf("[DEBUG] Bar %d: Stored composite indicator '%s' value: %.4f\n", barIndex, name, e.values[name])
