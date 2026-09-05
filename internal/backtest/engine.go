@@ -254,7 +254,7 @@ func runBacktestLoop(
 	portfolioInstance *portfolio.Portfolio,
 	riskManager *risk.Manager,
 	executor *execution.SimpleExecutor,
-	brokerInstance *broker.Broker,
+	brokerInstance *broker.LegacyBroker,
 	config BacktestConfig,
 	strategyAST *ast.Strategy,
 	positionSizer *risk.PositionSizer,
