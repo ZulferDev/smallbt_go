@@ -1,0 +1,69 @@
+strategy:
+  name: outlier_resistant_trend
+  version: "1"
+  description: "Trend following strategy with outlier clipping"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+  
+  transforms:
+    enabled: true
+    transforms:
+      # Clip extreme price moves to reduce noise
+      # Cap at ±5% from typical range
+      - type: clip
+        field: close
+        params:
+          min: 40000
+          max: 60000
+
+indicators:
+  # Fast EMA on clipped prices
+  ema_fast:
+    type: ema
+    source: close
+    period: 9
+  
+  # Slow EMA on clipped prices
+  ema_slow:
+    type: ema
+    source: close
+    period: 21
+  
+  # Volume average
+  volume_avg:
+    type: sma
+    source: volume
+    period: 20
+  
+  # ATR for stops
+  atr:
+    type: atr
+    period: 14
+
+entry:
+  long:
+    # Enter on EMA crossover with volume
+    all:
+      - cross_above: [ema_fast, ema_slow]
+      - gt: [volume, volume_avg]
+
+exit:
+  long:
+    any:
+      - cross_below: [ema_fast, ema_slow]
+
+risk:
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: atr
+    period: 14
+    multiplier: 2.0
+
+  take_profit:
+    type: risk_reward
+    ratio: 2.5

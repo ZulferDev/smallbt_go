@@ -115,6 +115,21 @@ func buildTransform(spec TransformSpec) (transform.Transform, error) {
 			Window: window,
 		}, nil
 
+	case "clip":
+		min, err := getFloatParam(spec.Params, "min", 0)
+		if err != nil {
+			return nil, err
+		}
+		max, err := getFloatParam(spec.Params, "max", 100)
+		if err != nil {
+			return nil, err
+		}
+		return &transform.ClipTransform{
+			Field: spec.Field,
+			Min:   min,
+			Max:   max,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown transform type: %s", spec.Type)
 	}
@@ -294,6 +309,22 @@ func ValidateTransformConfig(config *TransformConfig) error {
 			}
 			if window < 2 {
 				return fmt.Errorf("transform %d (percentile_rank): window must be >= 2", i)
+			}
+
+		case "clip":
+			if spec.Field == "" {
+				return fmt.Errorf("transform %d (clip): field is required", i)
+			}
+			min, err := getFloatParam(spec.Params, "min", 0)
+			if err != nil {
+				return fmt.Errorf("transform %d (clip): %w", i, err)
+			}
+			max, err := getFloatParam(spec.Params, "max", 100)
+			if err != nil {
+				return fmt.Errorf("transform %d (clip): %w", i, err)
+			}
+			if min >= max {
+				return fmt.Errorf("transform %d (clip): min must be < max", i)
 			}
 
 		default:
