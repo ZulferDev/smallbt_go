@@ -79,10 +79,11 @@ func (t *MovingAverageSmoothTransform) Validate() error {
 	}
 
 	validFields := map[string]bool{
-		"open":  true,
-		"high":  true,
-		"low":   true,
-		"close": true,
+		"open":   true,
+		"high":   true,
+		"low":    true,
+		"close":  true,
+		"volume": true,
 	}
 
 	if !validFields[t.field] {
@@ -152,10 +153,11 @@ func (t *DifferenceTransform) Name() string {
 // Validate validates the transform configuration.
 func (t *DifferenceTransform) Validate() error {
 	validFields := map[string]bool{
-		"open":  true,
-		"high":  true,
-		"low":   true,
-		"close": true,
+		"open":   true,
+		"high":   true,
+		"low":    true,
+		"close":  true,
+		"volume": true,
 	}
 
 	if !validFields[t.field] {

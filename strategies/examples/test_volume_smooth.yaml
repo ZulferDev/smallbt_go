@@ -1,0 +1,51 @@
+strategy:
+  name: test_volume_smooth
+  version: "1"
+  description: "Test volume smoothing after fix"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+  
+  transforms:
+    enabled: true
+    transforms:
+      # Smooth volume - should work now!
+      - type: smooth
+        field: volume
+        params:
+          period: 5
+
+indicators:
+  sma_short:
+    type: sma
+    source: close
+    period: 5
+  
+  volume_avg:
+    type: sma
+    source: volume
+    period: 10
+
+entry:
+  long:
+    all:
+      - cross_above: [sma_short, close]
+
+exit:
+  long:
+    any:
+      - cross_below: [sma_short, close]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.5
+
+  stop_loss:
+    type: percentage
+    value: 0.05
+
+  take_profit:
+    type: percentage
+    value: 0.10
