@@ -1,438 +1,744 @@
-# Data Transforms in Strategy Configuration
+# Transform Guide
 
-## Overview
+**Data preprocessing and transformation for advanced strategies**
 
-The backtest engine supports optional data preprocessing transforms that are applied to market data before strategy evaluation. Transforms enable normalization, scaling, smoothing, and statistical transformations to improve strategy robustness and cross-asset applicability.
+---
 
-## Configuration
+## Table of Contents
 
-Add transforms to your strategy YAML under `data.transforms`:
+1. [Introduction](#introduction)
+2. [Transform Basics](#transform-basics)
+3. [Statistical Transforms](#statistical-transforms)
+4. [Smoothing Transforms](#smoothing-transforms)
+5. [Time Series Transforms](#time-series-transforms)
+6. [Outlier Handling](#outlier-handling)
+7. [Transform Pipelines](#transform-pipelines)
+8. [Best Practices](#best-practices)
+
+---
+
+## Introduction
+
+Transforms preprocess your data **before** strategy execution. They enable:
+
+- **Noise reduction** - Smooth price data
+- **Normalization** - Compare different timeframes
+- **Statistical analysis** - Z-scores, percentiles
+- **Time series** - Stationarity, differencing
+- **Outlier control** - Cap extreme values
+
+### When to Use Transforms
+
+✅ **Use transforms when:**
+- Price data is noisy
+- Need statistical indicators
+- Comparing different symbols/timeframes
+- Building mean reversion strategies
+- Need trend removal
+
+❌ **Don't use transforms when:**
+- Strategy works on raw prices
+- Need original price levels
+- Unsure of mathematical implications
+- Testing for first time (baseline first)
+
+---
+
+## Transform Basics
+
+### Configuration
+
+Add transforms to your strategy YAML:
 
 ```yaml
 data:
   symbol: BTCUSDT
-  timeframe: 4h
+  timeframe: 1h
   
   transforms:
     enabled: true
-    chain:
-      - type: normalize
+    transforms:
+      - type: zscore
+        field: close
         params:
-          columns: [close]
-          method: minmax
-          window: 100
-      
-      - type: smooth
-        params:
-          columns: [volume]
-          window: 5
-          method: sma
+          window: 20
 ```
 
-## Available Transforms
+### Structure
 
-### 1. Scale
+Each transform has:
+- **type**: Transform name
+- **field**: Which OHLCV field to transform
+- **params**: Transform-specific parameters
 
-Multiply column values by a constant factor.
+### Supported Fields
 
-```yaml
-- type: scale
-  params:
-    columns: [close, high, low]
-    factor: 0.001
-```
+- `open` - Opening price
+- `high` - Highest price
+- `low` - Lowest price
+- `close` - Closing price (most common)
+- `volume` - Trading volume
 
-**Use cases:**
-- Convert between units (e.g., cents to dollars)
-- Reduce numerical magnitude for stability
-- Prepare data for ML models
+### Execution Order
 
-### 2. Normalize
-
-Normalize data to standard range or distribution.
-
-**Min-Max Normalization** (0 to 1 range):
-```yaml
-- type: normalize
-  params:
-    columns: [close]
-    method: minmax
-    window: 100
-```
-
-**Z-Score Normalization** (mean=0, std=1):
-```yaml
-- type: normalize
-  params:
-    columns: [close]
-    method: zscore
-    window: 50
-```
-
-**Use cases:**
-- Cross-asset strategies (BTC vs ETH at different price levels)
-- Momentum comparison across instruments
-- Statistical analysis requiring standard distributions
-- Indicator stability across price ranges
-
-**Parameters:**
-- `columns`: List of columns to normalize
-- `method`: `minmax` or `zscore`
-- `window`: Rolling window size for statistics
-
-### 3. Log Returns
-
-Convert prices to logarithmic returns.
-
-```yaml
-- type: log_returns
-  params:
-    columns: [close]
-    periods: 1
-```
-
-**Use cases:**
-- Momentum and trend analysis
-- Better statistical properties (stationarity)
-- Correct handling of compounding
-- Time series modeling
-
-**Parameters:**
-- `columns`: Price columns to convert
-- `periods`: Number of periods for return calculation (default: 1)
-
-**Note:** First `periods` rows become NaN and are filtered out.
-
-### 4. Percentage Change
-
-Calculate percentage change over periods.
-
-```yaml
-- type: percentage_change
-  params:
-    columns: [close]
-    periods: 1
-```
-
-**Use cases:**
-- Simple return calculation
-- Momentum indicators
-- Rate of change analysis
-
-**Parameters:**
-- `columns`: Columns to compute percentage change
-- `periods`: Number of periods (default: 1)
-
-**Note:** First `periods` rows become NaN and are filtered out.
-
-### 5. Smooth
-
-Apply smoothing to reduce noise.
-
-```yaml
-- type: smooth
-  params:
-    columns: [volume, close]
-    window: 5
-    method: sma
-```
-
-**Use cases:**
-- Reduce volume noise
-- Smooth price data for cleaner signals
-- Prepare data for indicator calculation
-
-**Parameters:**
-- `columns`: Columns to smooth
-- `window`: Smoothing window size
-- `method`: Currently only `sma` supported
-
-**Note:** First `window-1` rows become NaN and are filtered out.
-
-## Transform Chain Execution
-
-Transforms are applied sequentially in the order specified:
+Transforms are applied sequentially:
 
 ```yaml
 transforms:
-  enabled: true
-  chain:
-    - type: log_returns      # Step 1: Convert to returns
-      params:
-        columns: [close]
-        periods: 1
-    
-    - type: normalize        # Step 2: Normalize returns
-      params:
-        columns: [close]
-        method: zscore
-        window: 50
-    
-    - type: smooth           # Step 3: Smooth normalized returns
-      params:
-        columns: [close]
-        window: 3
-        method: sma
+  - type: smooth      # 1. Smooth first
+  - type: difference  # 2. Then difference
+  - type: zscore      # 3. Then normalize
 ```
 
-**Execution:**
-1. Load raw candles
-2. Apply log_returns → close becomes log returns
-3. Apply normalize → close becomes normalized z-scores
-4. Apply smooth → close becomes smoothed z-scores
-5. Strategy receives final transformed data
+---
 
-## Important Considerations
+## Statistical Transforms
 
-### Data Loss
+### Z-Score Normalization
 
-Some transforms remove initial rows:
-- `log_returns` with `periods: n` → lose first `n` rows
-- `percentage_change` with `periods: n` → lose first `n` rows  
-- `smooth` with `window: n` → lose first `n-1` rows
-- `normalize` with `window: n` → lose first `n-1` rows
+Converts values to standard deviations from mean.
 
-**Impact:** Your backtest will start later than the raw data start time.
+**Formula:** `z = (x - μ) / σ`
 
-### Indicator Warm-Up
-
-Transforms are applied **before** indicator calculation:
-- Indicators see transformed data
-- Indicator warm-up periods apply to transformed data
-- Total warm-up = transform data loss + indicator periods
-
-**Example:**
+**Configuration:**
 ```yaml
-transforms:
-  chain:
-    - type: log_returns
+- type: zscore
+  field: close
+  params:
+    window: 20  # Rolling window size
+```
+
+**Output:**
+- `z = 0` → At mean
+- `z > 2` → 2 std deviations above mean (overbought)
+- `z < -2` → 2 std deviations below mean (oversold)
+
+**Use Cases:**
+- Mean reversion strategies
+- Outlier detection
+- Statistical arbitrage
+- Comparing different timeframes
+
+**Example Strategy:**
+```yaml
+data:
+  transforms:
+    - type: zscore
+      field: close
       params:
-        periods: 1        # Lose 1 row
+        window: 20
 
 indicators:
-  sma_20:
-    type: sma
-    period: 20          # Need 20 rows for first value
-
-# Total: Need 21 rows before first signal
-```
-
-### Column Semantics
-
-After transforms, column meanings change:
-
-**Original:**
-- `close` = closing price (e.g., 50000.0)
-- `volume` = trade volume (e.g., 123.45)
-
-**After log_returns:**
-- `close` = log return (e.g., 0.002)
-- `volume` = unchanged
-
-**After normalize (minmax):**
-- `close` = normalized value in [0, 1] (e.g., 0.745)
-- `volume` = unchanged unless specified
-
-**Impact:** Be mindful when configuring:
-- Stop losses (percentage vs absolute)
-- Position sizing
-- Risk management
-- Exit conditions
-
-## Performance
-
-### Streaming Mode (CSV)
-
-CSV data feeds use lazy evaluation:
-```
-CSV Reader → Transform Pipeline → Strategy
-```
-- Memory efficient
-- Processes one candle at a time
-- Suitable for large datasets
-
-### Batch Mode (Parquet)
-
-Parquet loads entire dataset first:
-```
-Parquet Reader → Load All → Apply Transforms → Strategy
-```
-- Faster for small/medium datasets
-- Higher memory usage
-- Future: Streaming parquet support planned
-
-## Disabling Transforms
-
-Set `enabled: false` to disable without removing config:
-
-```yaml
-transforms:
-  enabled: false
-  chain:
-    - type: normalize
-      params:
-        columns: [close]
-        method: minmax
-        window: 100
-```
-
-Strategy will receive raw, untransformed data.
-
-## Examples
-
-### Example 1: Cross-Asset Strategy
-
-Normalize prices for strategies that work across BTC, ETH, SOL:
-
-```yaml
-data:
-  transforms:
-    enabled: true
-    chain:
-      - type: normalize
-        params:
-          columns: [close, high, low]
-          method: minmax
-          window: 100
-```
-
-Indicators now work on normalized [0,1] range regardless of asset price.
-
-### Example 2: Statistical Momentum
-
-Use z-scores for mean reversion:
-
-```yaml
-data:
-  transforms:
-    enabled: true
-    chain:
-      - type: normalize
-        params:
-          columns: [close]
-          method: zscore
-          window: 50
+  rsi:
+    type: rsi
+    period: 14
 
 entry:
   long:
     all:
-      - lt: [close, -2]  # Buy when 2 std devs below mean
+      - lt: [close, -2]    # Z-score < -2 (oversold)
+      - lt: [rsi, 30]      # RSI confirms
 ```
 
-### Example 3: Returns-Based Strategy
+**Properties:**
+- Parametric (assumes normal distribution)
+- Unbounded output (-∞ to +∞)
+- Warm-up period: window - 1 candles
 
-Work with log returns instead of prices:
+---
 
+### Percentile Rank
+
+Converts values to percentile within rolling window (0-100%).
+
+**Formula:** `percentile = (rank / (n-1)) * 100`
+
+**Configuration:**
+```yaml
+- type: percentile_rank
+  field: close
+  params:
+    window: 20
+```
+
+**Output:**
+- `0%` → Minimum in window
+- `50%` → Median
+- `100%` → Maximum in window
+
+**Use Cases:**
+- Relative strength analysis
+- Overbought/oversold (>80% / <20%)
+- Rank-based strategies
+- Distribution-agnostic normalization
+
+**Example Strategy:**
 ```yaml
 data:
   transforms:
-    enabled: true
-    chain:
-      - type: log_returns
-        params:
-          columns: [close]
-          periods: 1
-      
-      - type: normalize
-        params:
-          columns: [close]
-          method: zscore
-          window: 20
+    - type: percentile_rank
+      field: close
+      params:
+        window: 20
+
+entry:
+  long:
+    all:
+      - lt: [close, 20]     # Below 20th percentile
+      - gt: [volume, volume_avg]
+```
+
+**Properties:**
+- Non-parametric (no distribution assumption)
+- Bounded output (0-100)
+- Warm-up period: window - 1 candles
+
+**Comparison:**
+
+| Aspect | Z-Score | Percentile |
+|--------|---------|------------|
+| Type | Parametric | Non-parametric |
+| Range | Unbounded | 0-100% |
+| Assumption | Normal dist | None |
+| Outliers | Sensitive | Robust |
+
+---
+
+## Smoothing Transforms
+
+### SMA Smoothing
+
+Simple moving average smoothing.
+
+**Configuration:**
+```yaml
+- type: smooth
+  field: close
+  params:
+    period: 5
+```
+
+**Use Cases:**
+- Noise reduction
+- Trend clarity
+- Stable signals
+
+**Properties:**
+- Equal weights
+- More lag
+- Better stability
+
+---
+
+### EMA Smoothing
+
+Exponential moving average smoothing.
+
+**Formula:** `EMA[t] = α * value[t] + (1-α) * EMA[t-1]`  
+where `α = 2/(period+1)`
+
+**Configuration:**
+```yaml
+- type: ema_smooth
+  field: close
+  params:
+    period: 12
+```
+
+**Use Cases:**
+- Noise reduction with responsiveness
+- Trend following
+- Less lag than SMA
+
+**Example Strategy:**
+```yaml
+data:
+  transforms:
+    - type: ema_smooth
+      field: close
+      params:
+        period: 12
 
 indicators:
-  momentum:
-    type: sma
+  ema_fast:
+    type: ema
     source: close
+    period: 5
+  
+  ema_slow:
+    type: ema
+    source: close
+    period: 13
+
+entry:
+  long:
+    all:
+      - cross_above: [ema_fast, ema_slow]
+```
+
+**Properties:**
+- Exponential weights (recent data emphasized)
+- Less lag than SMA
+- No warm-up period
+
+**Comparison:**
+
+| Aspect | SMA | EMA |
+|--------|-----|-----|
+| Weights | Equal | Exponential |
+| Lag | More | Less |
+| Responsiveness | Lower | Higher |
+| Best For | Stability | Trend detection |
+
+---
+
+## Time Series Transforms
+
+### Differencing
+
+Calculates change between consecutive values.
+
+**Formula:** `diff[t] = value[t] - value[t-1]`
+
+**Configuration:**
+```yaml
+- type: difference
+  field: close
+  params:
+    order: 1  # 1=velocity, 2=acceleration, 3=jerk
+```
+
+**Order Meanings:**
+- **Order 1**: Velocity (price change)
+- **Order 2**: Acceleration (change of change)
+- **Order 3**: Jerk (change of acceleration)
+
+**Use Cases:**
+- Remove trends
+- Make time series stationary
+- Momentum strategies
+- Rate of change analysis
+
+**Example Strategy:**
+```yaml
+data:
+  transforms:
+    - type: difference
+      field: close
+      params:
+        order: 1  # First-order: velocity
+
+indicators:
+  momentum_avg:
+    type: sma
+    source: close  # Already differenced
     period: 10
 
 entry:
   long:
     all:
-      - gt: [momentum, 0.5]  # Positive normalized momentum
+      - gt: [close, 0]              # Positive momentum
+      - gt: [close, momentum_avg]   # Accelerating
 ```
 
-## Validation
+**Properties:**
+- First difference removes linear trends
+- Second difference removes quadratic trends
+- Invertible (cumsum reverses)
+- No warm-up period
 
-The engine validates transforms before execution:
+**Mathematical Properties:**
+```
+Original prices: 100, 105, 110, 115, 120
+1st difference:  0,   5,   5,   5,   5    (velocity)
+2nd difference:  0,   5,   0,   0,   0    (acceleration)
+```
 
-**Valid:**
+---
+
+### Log Returns
+
+Logarithmic returns for percentage changes.
+
+**Formula:** `log_return[t] = log(value[t] / value[t-1])`
+
+**Configuration:**
+```yaml
+- type: log_returns
+  field: close
+```
+
+**Use Cases:**
+- Percentage change analysis
+- Statistical properties
+- Comparing different symbols
+
+**Properties:**
+- Time-additive
+- Symmetric for gains/losses
+- Requires positive prices
+
+---
+
+## Outlier Handling
+
+### Clipping
+
+Caps values to [min, max] range.
+
+**Configuration:**
+```yaml
+- type: clip
+  field: close
+  params:
+    min: 40000
+    max: 60000
+```
+
+**Use Cases:**
+- Remove extreme outliers
+- Range limiting
+- Robust signal generation
+- Prevent flash crash impact
+
+**Example Strategy:**
+```yaml
+data:
+  transforms:
+    # Clip outliers first
+    - type: clip
+      field: close
+      params:
+        min: 40000
+        max: 60000
+    
+    # Then smooth
+    - type: ema_smooth
+      field: close
+      params:
+        period: 10
+
+indicators:
+  ema_fast:
+    type: ema
+    period: 9
+  
+  ema_slow:
+    type: ema
+    period: 21
+
+entry:
+  long:
+    all:
+      - cross_above: [ema_fast, ema_slow]
+```
+
+**Properties:**
+- Idempotent: `clip(clip(x)) = clip(x)`
+- Preserves order
+- No warm-up period
+- Fast (O(n))
+
+---
+
+## Transform Pipelines
+
+### Multi-Stage Processing
+
+Combine transforms for powerful preprocessing:
+
+### Pipeline 1: Statistical Momentum
+
 ```yaml
 transforms:
-  enabled: true
-  chain:
-    - type: normalize
-      params:
-        columns: [close]
-        method: minmax
-        window: 100
+  - type: difference      # Calculate velocity
+    field: close
+    params:
+      order: 1
+  
+  - type: zscore         # Normalize to z-scores
+    field: close
+    params:
+      window: 20
 ```
 
-**Invalid - Will Error:**
+**Result:** Z-scored velocity (statistical momentum signal)
+
+---
+
+### Pipeline 2: Robust Trend Following
+
 ```yaml
 transforms:
-  enabled: true
-  chain:
-    - type: normalize
-      params:
-        columns: [close]
-        method: invalid_method  # ❌ Unknown method
-        window: 100
+  - type: clip           # Remove outliers first
+    field: close
+    params:
+      min: 40000
+      max: 60000
+  
+  - type: ema_smooth     # Then smooth
+    field: close
+    params:
+      period: 12
 ```
 
-**Invalid - Will Error:**
+**Result:** Outlier-resistant, smoothed prices
+
+---
+
+### Pipeline 3: Relative Strength with Outlier Control
+
 ```yaml
 transforms:
-  enabled: true
-  chain:
-    - type: unknown_transform  # ❌ Unknown transform type
-      params:
-        columns: [close]
+  - type: clip           # Cap extremes
+    field: close
+    params:
+      min: 0
+      max: 100000
+  
+  - type: percentile_rank  # Rank normalize
+    field: close
+    params:
+      window: 20
 ```
 
-Clear error messages guide you to fix configuration issues.
+**Result:** Outlier-resistant percentile ranks
 
-## Testing Your Transforms
+---
 
-1. **Validate First:**
-```bash
-trader validate --strategy your_strategy.yaml
+### Pipeline 4: Stationary Statistical Analysis
+
+```yaml
+transforms:
+  - type: difference     # Make stationary
+    field: close
+    params:
+      order: 1
+  
+  - type: smooth         # Smooth velocity
+    field: close
+    params:
+      period: 5
+  
+  - type: percentile_rank  # Rank normalize
+    field: close
+    params:
+      window: 20
 ```
 
-2. **Small Backtest:**
-```bash
-trader backtest --strategy your_strategy.yaml --data small_sample.csv
-```
+**Result:** Percentile-ranked smoothed velocity
 
-3. **Check Output:**
-- Verify trade count is reasonable
-- Check if transforms caused excessive data loss
-- Validate strategy logic still makes sense on transformed data
-
-4. **Compare:**
-Run same strategy with and without transforms to understand impact.
+---
 
 ## Best Practices
 
-1. **Start Simple:** Use one transform at a time initially
-2. **Understand Data Loss:** Account for warm-up period reduction
-3. **Validate Logic:** Ensure strategy conditions make sense on transformed data
-4. **Document Intent:** Add comments explaining why each transform is used
-5. **Test Both Modes:** Verify strategy works with and without transforms
-6. **Monitor Warm-Up:** Ensure sufficient data after transform data loss
+### 1. Start Simple
 
-## Future Enhancements
+```yaml
+# ❌ DON'T start with complex pipelines
+transforms:
+  - type: clip
+  - type: smooth
+  - type: difference
+  - type: zscore
 
-Planned features:
-- Custom transform functions
-- Multi-symbol transforms (cointegration, correlation)
-- Conditional transforms (apply only when conditions met)
-- Transform parameter optimization
-- Streaming parquet support
-- More smoothing methods (EMA, Kalman)
+# ✅ DO start simple, add complexity gradually
+transforms:
+  - type: smooth
+    field: close
+    params:
+      period: 5
+```
 
-## See Also
+### 2. Understand Mathematical Implications
 
-- Strategy examples: `strategies/examples/sma_cross_normalized.yaml`
-- Strategy examples: `strategies/examples/momentum_log_returns.yaml`
-- Transform implementation: `internal/data/transform/`
-- Integration guide: Week 4 Day 2 report
+```yaml
+# ❌ DON'T use transforms you don't understand
+transforms:
+  - type: zscore  # What does z-score mean for my strategy?
+
+# ✅ DO understand the transformation
+# Z-score converts to standard deviations from mean
+# Useful for mean reversion, outlier detection
+```
+
+### 3. Test With and Without
+
+Always compare:
+1. Baseline (no transforms)
+2. With transforms
+
+```bash
+# Baseline
+./trader backtest --strategy baseline.yaml --data data.csv
+
+# With transforms
+./trader backtest --strategy with_transforms.yaml --data data.csv
+```
+
+### 4. Mind the Warm-up Period
+
+Transforms with windows need warm-up:
+
+```yaml
+# This needs 20 candles before valid signals
+- type: zscore
+  field: close
+  params:
+    window: 20
+```
+
+Ensure your data has enough history.
+
+### 5. Validate Transform Output
+
+Check transformed values make sense:
+
+```bash
+# Enable verbose logging
+./trader backtest --strategy my_strategy.yaml --data data.csv --verbose
+```
+
+### 6. Consider Order
+
+Transform order matters:
+
+```yaml
+# Different results!
+# Option A: Smooth then normalize
+transforms:
+  - type: smooth
+  - type: zscore
+
+# Option B: Normalize then smooth
+transforms:
+  - type: zscore
+  - type: smooth
+```
+
+Generally: Clean → Transform → Normalize
+
+### 7. Use Appropriate Fields
+
+```yaml
+# ✅ Good: Close price for signals
+- type: zscore
+  field: close
+
+# ⚠️ Careful: Volume has different properties
+- type: zscore
+  field: volume  # Ensure this makes sense for your strategy
+```
+
+---
+
+## Common Patterns
+
+### Pattern 1: Noise Reduction
+
+```yaml
+transforms:
+  - type: ema_smooth
+    field: close
+    params:
+      period: 5
+```
+
+### Pattern 2: Mean Reversion
+
+```yaml
+transforms:
+  - type: zscore
+    field: close
+    params:
+      window: 20
+```
+
+### Pattern 3: Momentum
+
+```yaml
+transforms:
+  - type: difference
+    field: close
+    params:
+      order: 1
+```
+
+### Pattern 4: Robust Signals
+
+```yaml
+transforms:
+  - type: clip
+    field: close
+    params:
+      min: 40000
+      max: 60000
+  
+  - type: percentile_rank
+    field: close
+    params:
+      window: 20
+```
+
+---
+
+## Troubleshooting
+
+### "Insufficient data" Error
+
+**Problem:** Not enough candles for transform window.
+
+**Solution:**
+- Reduce window size
+- Use more historical data
+- Check transform requirements
+
+### Unexpected Results
+
+**Problem:** Strategy behaves strangely after adding transforms.
+
+**Solution:**
+- Check transformed values
+- Verify indicator calculations
+- Compare with non-transformed baseline
+- Ensure indicators use correct source
+
+### Performance Degradation
+
+**Problem:** Strategy performs worse with transforms.
+
+**Solution:**
+- Transforms may not suit your strategy
+- Try simpler transforms
+- Test on different time periods
+- Remove transforms, focus on raw signals
+
+---
+
+## Transform Reference
+
+| Transform | Type | Window | Output Range | Use Case |
+|-----------|------|--------|--------------|----------|
+| `zscore` | Statistical | Yes | Unbounded | Mean reversion |
+| `percentile_rank` | Statistical | Yes | 0-100% | Relative strength |
+| `smooth` | Smoothing | Yes | Same as input | Noise reduction |
+| `ema_smooth` | Smoothing | No | Same as input | Responsive smoothing |
+| `difference` | Time Series | No | Same as input | Stationarity, momentum |
+| `clip` | Outlier | No | [min, max] | Outlier control |
+| `normalize` | Statistical | No | 0-1 | Min-max scaling |
+| `log_returns` | Time Series | No | Unbounded | Percentage change |
+| `scale` | Simple | No | Scaled | Multiply by factor |
+
+---
+
+## Further Reading
+
+- [Getting Started Guide](getting-started.md)
+- [Indicator Reference](indicators.md)
+- [Strategy Examples](../../strategies/examples/)
+- [Phase 17 Documentation](../reports/phase17_complete.md)
+- [Phase 18 Documentation](../reports/phase_18_complete.md)
+
+---
+
+**Master transforms for powerful preprocessing! 🔄**
