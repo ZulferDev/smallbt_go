@@ -1,0 +1,59 @@
+strategy:
+  name: zscore_mean_reversion
+  version: "1"
+  description: "Mean reversion strategy using z-score normalization"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+  
+  transforms:
+    enabled: true
+    transforms:
+      # Z-score normalization with 20-period window
+      # Values > 2 or < -2 indicate potential mean reversion
+      - type: zscore
+        field: close
+        params:
+          window: 20
+
+indicators:
+  # RSI for additional confirmation
+  rsi:
+    type: rsi
+    source: close
+    period: 14
+  
+  # Volume for confirmation
+  volume_avg:
+    type: sma
+    source: volume
+    period: 20
+
+entry:
+  long:
+    # Enter when price is oversold (z < -2) and RSI confirms
+    all:
+      - lt: [close, -1.5]  # Z-score < -1.5 (oversold)
+      - lt: [rsi, 40]      # RSI oversold
+      - gt: [volume, volume_avg]  # Volume confirmation
+
+exit:
+  long:
+    any:
+      # Exit when price returns to mean (z near 0)
+      - gt: [close, 0]  # Z-score back to mean
+      - gt: [rsi, 60]   # RSI overbought
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.3
+
+  stop_loss:
+    type: percentage
+    value: 0.03
+
+  take_profit:
+    type: percentage
+    value: 0.06

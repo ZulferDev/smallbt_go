@@ -75,6 +75,16 @@ func buildTransform(spec TransformSpec) (transform.Transform, error) {
 		}
 		return transform.NewMovingAverageSmoothTransform(period, spec.Field), nil
 
+	case "zscore":
+		window, err := getIntParam(spec.Params, "window", 20)
+		if err != nil {
+			return nil, err
+		}
+		return &transform.ZScoreTransform{
+			Field:  spec.Field,
+			Window: window,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown transform type: %s", spec.Type)
 	}
@@ -206,6 +216,18 @@ func ValidateTransformConfig(config *TransformConfig) error {
 			}
 			if period < 2 {
 				return fmt.Errorf("transform %d (smooth): period must be >= 2", i)
+			}
+
+		case "zscore":
+			if spec.Field == "" {
+				return fmt.Errorf("transform %d (zscore): field is required", i)
+			}
+			window, err := getIntParam(spec.Params, "window", 20)
+			if err != nil {
+				return fmt.Errorf("transform %d (zscore): %w", i, err)
+			}
+			if window < 2 {
+				return fmt.Errorf("transform %d (zscore): window must be >= 2", i)
 			}
 
 		default:
