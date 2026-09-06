@@ -10,20 +10,16 @@ data:
   # Data preprocessing pipeline
   transforms:
     enabled: true
-    chain:
+    transforms:
       # First normalize close prices to 0-1 range for stability
       - type: normalize
-        params:
-          columns: [close]
-          method: minmax
-          window: 100
+        field: close
       
       # Smooth volume data to reduce noise
       - type: smooth
+        field: volume
         params:
-          columns: [volume]
-          window: 5
-          method: sma
+          period: 5
 
 indicators:
   # Fast SMA on normalized close

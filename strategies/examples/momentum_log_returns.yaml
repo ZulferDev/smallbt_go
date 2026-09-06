@@ -10,19 +10,10 @@ data:
   # Transform price to log returns for momentum analysis
   transforms:
     enabled: true
-    chain:
+    transforms:
       # Convert close prices to log returns
       - type: log_returns
-        params:
-          columns: [close]
-          periods: 1
-      
-      # Normalize returns for cross-sectional comparison
-      - type: normalize
-        params:
-          columns: [close]
-          method: zscore
-          window: 50
+        field: close
 
 indicators:
   # Fast momentum on log returns

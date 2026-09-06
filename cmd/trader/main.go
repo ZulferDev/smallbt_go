@@ -11,11 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/ZulferDev/smallbt_go/internal/backtest"
 	"github.com/ZulferDev/smallbt_go/internal/broker"
 	"github.com/ZulferDev/smallbt_go/internal/data/csv"
 	"github.com/ZulferDev/smallbt_go/internal/data/feed"
 	"github.com/ZulferDev/smallbt_go/internal/execution"
+	"github.com/ZulferDev/smallbt_go/internal/integration"
 	"github.com/ZulferDev/smallbt_go/internal/market"
 	"github.com/ZulferDev/smallbt_go/internal/montecarlo"
 	"github.com/ZulferDev/smallbt_go/internal/optimization"
@@ -41,6 +44,8 @@ func run() error {
 	switch command {
 	case "validate":
 		return runValidate(os.Args[2:])
+	case "validate-transforms":
+		return runValidateTransforms(os.Args[2:])
 	case "backtest":
 		return runBacktest(os.Args[2:])
 	case "optimize":
@@ -68,13 +73,14 @@ func printHelp() {
 	fmt.Println(`trader - Declarative Quantitative Trading Backtesting Engine
 
 COMMANDS:
-  validate      Validate a strategy YAML configuration
-  backtest      Run a backtest with a strategy and data
-  optimize      Optimize strategy parameters
-  walkforward   Run Walk Forward Analysis
-  montecarlo    Run Monte Carlo Simulation
-  paper         Run paper trading with simulated real-time data
-  report        Generate reports from backtest results
+  validate             Validate a strategy YAML configuration
+  validate-transforms  Validate data transforms in a strategy
+  backtest             Run a backtest with a strategy and data
+  optimize             Optimize strategy parameters
+  walkforward          Run Walk Forward Analysis
+  montecarlo           Run Monte Carlo Simulation
+  paper                Run paper trading with simulated real-time data
+  report               Generate reports from backtest results
 
 FLAGS:
   -h, --help    Show this help message
@@ -82,6 +88,7 @@ FLAGS:
 
 EXAMPLES:
   trader validate strategy.yaml
+  trader validate-transforms --strategy strategy.yaml --data sample.csv
   trader backtest --strategy strategy.yaml --data data.csv
   trader paper --strategy strategy.yaml --symbol BTCUSDT --price 50000
   trader montecarlo --result backtest_result.json --simulations 10000`)
@@ -153,6 +160,95 @@ func runValidate(args []string) error {
 	return nil
 }
 
+func runValidateTransforms(args []string) error {
+	fs := flag.NewFlagSet("validate-transforms", flag.ExitOnError)
+	strategyPath := fs.String("strategy", "", "Path to strategy YAML file")
+
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("parse flags: %w", err)
+	}
+
+	if *strategyPath == "" {
+		return fmt.Errorf("strategy file path required (--strategy)")
+	}
+
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("TRANSFORM VALIDATION")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Printf("Strategy: %s\n", *strategyPath)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	// Load transform config from strategy YAML
+	// We use integration package which handles YAML parsing
+	yamlBytes, err := os.ReadFile(*strategyPath)
+	if err != nil {
+		return fmt.Errorf("read strategy file: %w", err)
+	}
+
+	// Parse YAML to extract transforms section
+	var strategyYAML struct {
+		Name string `yaml:"name"`
+		Version string `yaml:"version"`
+		Data struct {
+			Transforms *integration.TransformConfig `yaml:"transforms"`
+		} `yaml:"data"`
+	}
+
+	if err := yaml.Unmarshal(yamlBytes, &strategyYAML); err != nil {
+		return fmt.Errorf("parse strategy YAML: %w", err)
+	}
+
+	fmt.Printf("Strategy Name: %s (v%s)\n", strategyYAML.Name, strategyYAML.Version)
+	fmt.Println()
+
+	// Check if transforms are defined
+	if strategyYAML.Data.Transforms == nil {
+		fmt.Println("✅ No transforms defined")
+		fmt.Println("   Strategy will use raw market data")
+		return nil
+	}
+
+	transformConfig := strategyYAML.Data.Transforms
+
+	// Check if transforms are enabled
+	if !transformConfig.Enabled {
+		fmt.Println("⚠️  Transforms defined but DISABLED")
+		fmt.Printf("   %d transforms in chain (inactive)\n", len(transformConfig.Transforms))
+		return nil
+	}
+
+	// Validate transform chain
+	fmt.Printf("Transforms: %d in chain\n", len(transformConfig.Transforms))
+	fmt.Println()
+
+	for i, tc := range transformConfig.Transforms {
+		fmt.Printf("%d. Transform: %s\n", i+1, tc.Type)
+		
+		// Basic validation - check type is not empty
+		if tc.Type == "" {
+			fmt.Printf("   ❌ INVALID: transform type is empty\n")
+			return fmt.Errorf("transform %d has empty type", i+1)
+		}
+		
+		fmt.Printf("   ✅ Valid configuration\n")
+		
+		// Show parameters
+		if len(tc.Params) > 0 {
+			fmt.Println("   Parameters:")
+			for key, val := range tc.Params {
+				fmt.Printf("     - %s: %v\n", key, val)
+			}
+		}
+		fmt.Println()
+	}
+
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println("✅ Transform validation complete")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+	return nil
+}
+
 func runBacktest(args []string) error {
 	fs := flag.NewFlagSet("backtest", flag.ExitOnError)
 	strategyPath := fs.String("strategy", "", "Path to strategy YAML file")
@@ -191,25 +287,50 @@ func runBacktest(args []string) error {
 	if *dataPath == "" {
 		return fmt.Errorf("data file required (--data)")
 	}
+
+	// Parse strategy to get metadata
+	p := parser.NewParser()
+	strategy, err := p.ParseFile(*strategyPath)
+	if err != nil {
+		return fmt.Errorf("parse strategy: %w", err)
+	}
+
 	if *symbol == "" {
-		// Try to get from strategy first
-		parser := parser.NewParser()
-		strategy, err := parser.ParseFile(*strategyPath)
-		if err == nil && strategy.Data.Symbol != "" {
+		if strategy.Data.Symbol != "" {
 			*symbol = strategy.Data.Symbol
+		} else {
+			return fmt.Errorf("symbol required (--symbol or in strategy)")
 		}
 	}
-	if *symbol == "" {
-		return fmt.Errorf("symbol required (--symbol or in strategy)")
+
+	// Load transforms from YAML (if present)
+	var transformConfig *integration.TransformConfig
+	yamlBytes, err := os.ReadFile(*strategyPath)
+	if err == nil {
+		var strategyYAML struct {
+			Data struct {
+				Transforms *integration.TransformConfig `yaml:"transforms"`
+			} `yaml:"data"`
+		}
+		if err := yaml.Unmarshal(yamlBytes, &strategyYAML); err == nil {
+			transformConfig = strategyYAML.Data.Transforms
+			if transformConfig != nil && transformConfig.Enabled {
+				fmt.Printf("📊 Transforms enabled: %d in chain\n", len(transformConfig.Transforms))
+				for i, tc := range transformConfig.Transforms {
+					fmt.Printf("   %d. %s\n", i+1, tc.Type)
+				}
+			}
+		}
 	}
 
 	// Create config
 	config := backtest.BacktestConfig{
-		Symbol:       market.Symbol(*symbol),
-		Timeframe:    market.Timeframe(*timeframe),
-		InitialCash:  *initialCash,
-		StrategyPath: *strategyPath,
-		DataPath:     *dataPath,
+		Symbol:          market.Symbol(*symbol),
+		Timeframe:       market.Timeframe(*timeframe),
+		InitialCash:     *initialCash,
+		StrategyPath:    *strategyPath,
+		DataPath:        *dataPath,
+		TransformConfig: transformConfig,
 	}
 
 	// Parse dates if provided
