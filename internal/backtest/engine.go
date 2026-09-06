@@ -33,8 +33,8 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 		return nil, fmt.Errorf("load strategy: %w", err)
 	}
 
-	// Step 2: Load and prepare data
-	candles, err := loadCandles(config.DataPath, config.Timeframe)
+	// Step 2: Load and prepare data (with optional transforms)
+	candles, err := loadCandlesWithPipeline(config.DataPath, config.Timeframe, config.TransformConfig)
 	if err != nil {
 		return nil, fmt.Errorf("load candles: %w", err)
 	}

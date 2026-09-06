@@ -4,19 +4,21 @@ import (
 	"time"
 
 	"github.com/ZulferDev/smallbt_go/internal/analytics"
+	"github.com/ZulferDev/smallbt_go/internal/integration"
 	"github.com/ZulferDev/smallbt_go/internal/market"
 	"github.com/ZulferDev/smallbt_go/internal/portfolio"
 )
 
 // BacktestConfig holds configuration for a backtest.
 type BacktestConfig struct {
-	Symbol       market.Symbol
-	Timeframe    market.Timeframe
-	StartTime    time.Time
-	EndTime      time.Time
-	InitialCash  float64
-	StrategyPath string
-	DataPath     string
+	Symbol          market.Symbol
+	Timeframe       market.Timeframe
+	StartTime       time.Time
+	EndTime         time.Time
+	InitialCash     float64
+	StrategyPath    string
+	DataPath        string
+	TransformConfig *integration.TransformConfig // Optional data transforms
 }
 
 // BacktestResult holds the results of a backtest.
