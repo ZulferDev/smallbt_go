@@ -19,6 +19,11 @@ type BacktestConfig struct {
 	StrategyPath    string
 	DataPath        string
 	TransformConfig *integration.TransformConfig // Optional data transforms
+	
+	// Execution configuration
+	Commission      float64 // Commission rate (e.g., 0.001 = 0.1%)
+	SlippageModel   string  // Slippage model: "none", "fixed", "percentage", "volatility", "volume"
+	SlippageParams  map[string]float64 // Parameters for slippage model
 }
 
 // BacktestResult holds the results of a backtest.

@@ -101,9 +101,9 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 	// Create execution config from strategy or use defaults
 	execConfig := execution.Config{
 		SlippageType:  "percentage",
-		SlippageValue: 0.0005, // 0.05% slippage
-		FeeMaker:      0.0002,
-		FeeTaker:      0.0005,
+		SlippageValue: 0.0005, // 0.05% slippage (legacy)
+		FeeMaker:      config.Commission, // Use CLI commission
+		FeeTaker:      config.Commission,
 		Spread:        0.0001,
 		Seed:          42, // Fixed seed for reproducibility
 	}
@@ -126,6 +126,11 @@ func Run(config BacktestConfig) (*BacktestResult, error) {
 		if strategyAST.Execution.IntrabarPolicy != "" {
 			execConfig.IntrabarPolicy = strategyAST.Execution.IntrabarPolicy
 		}
+	}
+	
+	// Create slippage model from CLI config (overrides strategy config)
+	if config.SlippageModel != "" && config.SlippageModel != "none" {
+		execConfig.SlippageModel = createSlippageModel(config.SlippageModel, config.SlippageParams)
 	}
 
 	executor := execution.NewSimpleExecutor(execConfig)
@@ -743,4 +748,26 @@ func createOrderRequest(
 	}
 
 	return req
+}
+
+// createSlippageModel creates a slippage model based on the model name and parameters.
+func createSlippageModel(modelName string, params map[string]float64) execution.SlippageModel {
+	value := params["value"]
+	maxSlippage := params["max"]
+	
+	switch modelName {
+	case "fixed":
+		return execution.NewFixedSlippageModel(value)
+	case "percentage":
+		return execution.NewPercentageSlippageModel(value)
+	case "volatility":
+		return execution.NewVolatilitySlippageModel(value, maxSlippage)
+	case "volume":
+		return execution.NewVolumeSlippageModel(value, maxSlippage)
+	case "none":
+		return execution.NewNoSlippageModel()
+	default:
+		// Default to no slippage for unknown models
+		return execution.NewNoSlippageModel()
+	}
 }

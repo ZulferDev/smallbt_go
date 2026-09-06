@@ -10,8 +10,9 @@ import (
 
 // Config holds execution configuration.
 type Config struct {
-	SlippageType   string // "percentage", "fixed", "none"
+	SlippageType   string // "percentage", "fixed", "none" (deprecated, use SlippageModel)
 	SlippageValue  float64
+	SlippageModel  SlippageModel // New: use interface-based slippage model
 	FeeMaker       float64
 	FeeTaker       float64
 	Spread         float64 // Average spread
@@ -21,17 +22,37 @@ type Config struct {
 
 // SimpleExecutor simulates order execution in backtesting.
 type SimpleExecutor struct {
-	config     Config
-	rng        *rand.Rand
-	lastCandle *market.Candle
+	config        Config
+	rng           *rand.Rand
+	lastCandle    *market.Candle
+	slippageModel SlippageModel
 }
 
 // NewSimpleExecutor creates a new simple execution simulator.
 func NewSimpleExecutor(config Config) *SimpleExecutor {
-	return &SimpleExecutor{
+	executor := &SimpleExecutor{
 		config: config,
 		rng:    rand.New(rand.NewSource(config.Seed)),
 	}
+	
+	// Use provided SlippageModel if set, otherwise create from legacy config
+	if config.SlippageModel != nil {
+		executor.slippageModel = config.SlippageModel
+	} else {
+		// Fallback to legacy slippage config
+		switch config.SlippageType {
+		case "fixed":
+			executor.slippageModel = NewFixedSlippageModel(config.SlippageValue)
+		case "percentage":
+			executor.slippageModel = NewPercentageSlippageModel(config.SlippageValue)
+		case "none":
+			executor.slippageModel = NewNoSlippageModel()
+		default:
+			executor.slippageModel = NewNoSlippageModel()
+		}
+	}
+	
+	return executor
 }
 
 // SetCurrentCandle sets the current candle for execution.
@@ -186,25 +207,20 @@ func (e *SimpleExecutor) calculateStopLimitFillPrice(req order.OrderRequest, can
 	return e.calculateLimitFillPrice(reqCopy, candle)
 }
 
-// calculateSlippage calculates slippage for a fill.
+// calculateSlippage calculates slippage for a fill using the configured model.
 func (e *SimpleExecutor) calculateSlippage(req order.OrderRequest, fillPrice float64) float64 {
-	if e.config.SlippageType == "none" {
+	if e.slippageModel == nil {
 		return 0
 	}
-
-	var slippage float64
-	switch e.config.SlippageType {
-	case "percentage":
-		slippage = fillPrice * e.config.SlippageValue
-	case "fixed":
-		slippage = e.config.SlippageValue
-	default:
+	
+	// Use the slippage model with current candle context
+	slippage, err := e.slippageModel.CalculateSlippage(req, fillPrice, e.lastCandle)
+	if err != nil {
+		// If error, fall back to no slippage
 		return 0
 	}
-
-	// Add random component (±slippage)
-	randomFactor := e.rng.Float64()*2 - 1 // -1 to 1
-	return slippage * randomFactor
+	
+	return slippage
 }
 
 // calculateFees calculates fees for a fill.

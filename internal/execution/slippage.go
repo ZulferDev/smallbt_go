@@ -22,6 +22,11 @@ type FixedSlippageModel struct {
 	Amount float64 // Fixed slippage amount
 }
 
+// NewFixedSlippageModel creates a new fixed slippage model.
+func NewFixedSlippageModel(amount float64) *FixedSlippageModel {
+	return &FixedSlippageModel{Amount: amount}
+}
+
 func (m *FixedSlippageModel) Name() string {
 	return "fixed"
 }
@@ -37,6 +42,11 @@ func (m *FixedSlippageModel) CalculateSlippage(req order.OrderRequest, fillPrice
 // PercentageSlippageModel applies a percentage-based slippage.
 type PercentageSlippageModel struct {
 	Percentage float64 // Slippage as percentage (e.g., 0.001 = 0.1%)
+}
+
+// NewPercentageSlippageModel creates a new percentage slippage model.
+func NewPercentageSlippageModel(percentage float64) *PercentageSlippageModel {
+	return &PercentageSlippageModel{Percentage: percentage}
 }
 
 func (m *PercentageSlippageModel) Name() string {
@@ -59,6 +69,15 @@ type VolatilitySlippageModel struct {
 	VolatilityFactor float64 // Multiplier for volatility (e.g., 0.1 = 10% of range)
 	MinSlippage      float64 // Minimum slippage (absolute)
 	MaxSlippage      float64 // Maximum slippage (absolute)
+}
+
+// NewVolatilitySlippageModel creates a new volatility-based slippage model.
+func NewVolatilitySlippageModel(volatilityFactor, maxSlippage float64) *VolatilitySlippageModel {
+	return &VolatilitySlippageModel{
+		VolatilityFactor: volatilityFactor,
+		MinSlippage:      0,
+		MaxSlippage:      maxSlippage,
+	}
 }
 
 func (m *VolatilitySlippageModel) Name() string {
@@ -106,6 +125,15 @@ type VolumeSlippageModel struct {
 	MaxSlippage  float64 // Maximum slippage
 }
 
+// NewVolumeSlippageModel creates a new volume-based slippage model.
+func NewVolumeSlippageModel(impactFactor, maxSlippage float64) *VolumeSlippageModel {
+	return &VolumeSlippageModel{
+		ImpactFactor: impactFactor,
+		MinSlippage:  0,
+		MaxSlippage:  maxSlippage,
+	}
+}
+
 func (m *VolumeSlippageModel) Name() string {
 	return "volume"
 }
@@ -150,6 +178,11 @@ func (m *VolumeSlippageModel) applyDirection(slippage float64, side order.OrderS
 
 // NoSlippageModel applies no slippage (perfect execution).
 type NoSlippageModel struct{}
+
+// NewNoSlippageModel creates a new no-slippage model.
+func NewNoSlippageModel() *NoSlippageModel {
+	return &NoSlippageModel{}
+}
 
 func (m *NoSlippageModel) Name() string {
 	return "none"

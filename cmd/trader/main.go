@@ -259,6 +259,13 @@ func runBacktest(args []string) error {
 	timeframe := fs.String("timeframe", "1h", "Timeframe (e.g., 1m, 5m, 15m, 30m, 1h, 4h, 1d)")
 	startDate := fs.String("start", "", "Start date (YYYY-MM-DD)")
 	endDate := fs.String("end", "", "End date (YYYY-MM-DD)")
+	
+	// Execution configuration
+	commission := fs.Float64("commission", 0.001, "Commission rate (e.g., 0.001 = 0.1%)")
+	slippageModel := fs.String("slippage-model", "none", "Slippage model: none, fixed, percentage, volatility, volume")
+	slippageValue := fs.Float64("slippage", 0.0, "Slippage amount (meaning depends on model)")
+	slippageMax := fs.Float64("slippage-max", 0.01, "Max slippage for volatility/volume models (default 1%)")
+	
 	cpuProfile := fs.String("cpuprofile", "", "Write CPU profile to file")
 	memProfile := fs.String("memprofile", "", "Write memory profile to file")
 
@@ -331,6 +338,12 @@ func runBacktest(args []string) error {
 		StrategyPath:    *strategyPath,
 		DataPath:        *dataPath,
 		TransformConfig: transformConfig,
+		Commission:      *commission,
+		SlippageModel:   *slippageModel,
+		SlippageParams: map[string]float64{
+			"value": *slippageValue,
+			"max":   *slippageMax,
+		},
 	}
 
 	// Parse dates if provided
