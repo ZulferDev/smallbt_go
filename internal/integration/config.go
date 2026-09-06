@@ -105,6 +105,16 @@ func buildTransform(spec TransformSpec) (transform.Transform, error) {
 			Period: period,
 		}, nil
 
+	case "percentile_rank":
+		window, err := getIntParam(spec.Params, "window", 20)
+		if err != nil {
+			return nil, err
+		}
+		return &transform.PercentileRankTransform{
+			Field:  spec.Field,
+			Window: window,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown transform type: %s", spec.Type)
 	}
@@ -272,6 +282,18 @@ func ValidateTransformConfig(config *TransformConfig) error {
 			}
 			if period < 2 {
 				return fmt.Errorf("transform %d (ema_smooth): period must be >= 2", i)
+			}
+
+		case "percentile_rank":
+			if spec.Field == "" {
+				return fmt.Errorf("transform %d (percentile_rank): field is required", i)
+			}
+			window, err := getIntParam(spec.Params, "window", 20)
+			if err != nil {
+				return fmt.Errorf("transform %d (percentile_rank): %w", i, err)
+			}
+			if window < 2 {
+				return fmt.Errorf("transform %d (percentile_rank): window must be >= 2", i)
 			}
 
 		default:

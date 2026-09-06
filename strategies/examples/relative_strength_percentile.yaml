@@ -1,0 +1,66 @@
+strategy:
+  name: relative_strength_percentile
+  version: "1"
+  description: "Relative strength strategy using percentile rank"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+  
+  transforms:
+    enabled: true
+    transforms:
+      # Percentile rank: 0-100% position within range
+      # > 80% = overbought, < 20% = oversold
+      - type: percentile_rank
+        field: close
+        params:
+          window: 20
+
+indicators:
+  # RSI for confirmation
+  rsi:
+    type: rsi
+    source: close
+    period: 14
+  
+  # Volume for strength confirmation
+  volume_avg:
+    type: sma
+    source: volume
+    period: 20
+  
+  # Moving average for trend
+  ma_trend:
+    type: sma
+    source: close
+    period: 50
+
+entry:
+  long:
+    # Enter when price is in low percentile (oversold)
+    # but showing strength
+    all:
+      - lt: [close, 20]              # Percentile < 20% (oversold)
+      - lt: [rsi, 40]                # RSI confirms oversold
+      - gt: [volume, volume_avg]     # Volume strength
+      - gt: [ma_trend, 0]            # Trend confirmation
+
+exit:
+  long:
+    any:
+      - gt: [close, 80]              # Percentile > 80% (overbought)
+      - gt: [rsi, 70]                # RSI overbought
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.3
+
+  stop_loss:
+    type: percentage
+    value: 0.03
+
+  take_profit:
+    type: percentage
+    value: 0.06
