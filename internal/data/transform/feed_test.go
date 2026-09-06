@@ -10,15 +10,15 @@ import (
 	"github.com/ZulferDev/smallbt_go/internal/data/csv"
 )
 
-func createTestCSV(t *testing.T, count int) string {
-	t.Helper()
+func createTestCSV(tb testing.TB, count int) string {
+	tb.Helper()
 
-	tmpDir := t.TempDir()
+	tmpDir := tb.TempDir()
 	csvPath := filepath.Join(tmpDir, "test.csv")
 
 	file, err := os.Create(csvPath)
 	if err != nil {
-		t.Fatalf("Failed to create temp CSV: %v", err)
+		tb.Fatalf("Failed to create temp CSV: %v", err)
 	}
 	defer file.Close()
 

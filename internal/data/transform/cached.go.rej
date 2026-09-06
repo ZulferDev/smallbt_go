@@ -1,0 +1,18 @@
+--- internal/data/transform/cached.go
++++ internal/data/transform/cached.go
+@@ -82,7 +82,12 @@ func (ctf *CachedTransformedFeed) Close() error {
+ 
+ // CacheStats returns cache statistics.
+ func (ctf *CachedTransformedFeed) CacheStats() cache.CacheStats {
+-	ctf.mu.RLock()
+-	defer ctf.mu.RUnlock()
+-	return ctf.cache.Stats()
++	stats := ctf.cache.Stats()
++	return cache.CacheStats{
++		Hits:       stats.Hits,
++		Misses:     stats.Misses,
++		Evictions:  stats.Evictions,
++		Size:       stats.Size,
++		Capacity:   stats.Capacity,
++	}
+ }
