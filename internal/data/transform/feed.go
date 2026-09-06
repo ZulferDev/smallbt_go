@@ -1,0 +1,172 @@
+package transform
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/ZulferDev/smallbt_go/internal/data"
+	"github.com/ZulferDev/smallbt_go/internal/market"
+)
+
+// TransformedFeed wraps a data.DataFeed and applies transforms.
+type TransformedFeed struct {
+	feed      data.DataFeed
+	chain     *TransformChain
+	buffer    []*market.Candle
+	bufferIdx int
+	batchSize int
+	done      bool
+}
+
+// NewTransformedFeed creates a new transformed feed.
+func NewTransformedFeed(feed data.DataFeed, chain *TransformChain, batchSize int) (*TransformedFeed, error) {
+	if feed == nil {
+		return nil, fmt.Errorf("feed cannot be nil")
+	}
+	if chain == nil {
+		return nil, fmt.Errorf("transform chain cannot be nil")
+	}
+	if batchSize <= 0 {
+		batchSize = 100 // Default batch size
+	}
+
+	if err := chain.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid transform chain: %w", err)
+	}
+
+	return &TransformedFeed{
+		feed:      feed,
+		chain:     chain,
+		batchSize: batchSize,
+	}, nil
+}
+
+// Next returns the next transformed candle.
+func (tf *TransformedFeed) Next() (*market.Candle, error) {
+	// If buffer is empty, read and transform next batch
+	if tf.buffer == nil || tf.bufferIdx >= len(tf.buffer) {
+		if tf.done {
+			return nil, fmt.Errorf("end of data")
+		}
+
+		if err := tf.fillBuffer(); err != nil {
+			tf.done = true
+			return nil, err
+		}
+	}
+
+	// Return from buffer
+	candle := tf.buffer[tf.bufferIdx]
+	tf.bufferIdx++
+	return candle, nil
+}
+
+// fillBuffer reads and transforms the next batch.
+func (tf *TransformedFeed) fillBuffer() error {
+	// Read batch from underlying feed
+	input := make([]*market.Candle, 0, tf.batchSize)
+	for i := 0; i < tf.batchSize; i++ {
+		candle, err := tf.feed.Next(context.Background())
+		if err != nil {
+			if i == 0 {
+				return err
+			}
+			break // Partial batch
+		}
+		input = append(input, candle)
+	}
+
+	if len(input) == 0 {
+		return fmt.Errorf("no data available")
+	}
+
+	// Apply transforms
+	output, err := tf.chain.Apply(input)
+	if err != nil {
+		return fmt.Errorf("transform failed: %w", err)
+	}
+
+	// Update buffer
+	tf.buffer = output
+	tf.bufferIdx = 0
+
+	return nil
+}
+
+// ReadAll reads and transforms all remaining data.
+func (tf *TransformedFeed) ReadAll() ([]*market.Candle, error) {
+	// Read all from underlying feed
+	input := make([]*market.Candle, 0, 1000)
+	for {
+		candle, err := tf.feed.Next(context.Background())
+		if err != nil {
+			break
+		}
+		input = append(input, candle)
+	}
+
+	if len(input) == 0 {
+		return nil, fmt.Errorf("no data available")
+	}
+
+	// Apply transforms
+	output, err := tf.chain.Apply(input)
+	if err != nil {
+		return nil, fmt.Errorf("transform failed: %w", err)
+	}
+
+	return output, nil
+}
+
+// Close closes the underlying feed.
+func (tf *TransformedFeed) Close() error {
+	return tf.feed.Close()
+}
+
+// TransformedFeedStats tracks transform feed statistics.
+type TransformedFeedStats struct {
+	CandlesRead        int64
+	CandlesTransformed int64
+	BatchesProcessed   int64
+	TransformErrors    int64
+}
+
+// StatsTracker wraps a transformed feed with statistics tracking.
+type StatsTracker struct {
+	feed  *TransformedFeed
+	stats TransformedFeedStats
+}
+
+// NewStatsTracker creates a stats-tracking wrapper.
+func NewStatsTracker(feed *TransformedFeed) *StatsTracker {
+	return &StatsTracker{
+		feed: feed,
+	}
+}
+
+// Next reads with stats tracking.
+func (st *StatsTracker) Next() (*market.Candle, error) {
+	candle, err := st.feed.Next()
+	if err == nil {
+		st.stats.CandlesRead++
+		st.stats.CandlesTransformed++
+	} else {
+		st.stats.TransformErrors++
+	}
+	return candle, err
+}
+
+// Stats returns current statistics.
+func (st *StatsTracker) Stats() TransformedFeedStats {
+	return st.stats
+}
+
+// ResetStats resets statistics.
+func (st *StatsTracker) ResetStats() {
+	st.stats = TransformedFeedStats{}
+}
+
+// Close closes the underlying feed.
+func (st *StatsTracker) Close() error {
+	return st.feed.Close()
+}
