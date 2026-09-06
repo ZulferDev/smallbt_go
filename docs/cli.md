@@ -110,10 +110,22 @@ trader backtest [options]
 | Option | Description | Default | Example |
 |--------|-------------|---------|---------|
 | `--cash` | Initial cash balance | 10000 | `--cash 50000` |
-| `--commission` | Trading commission (%) | 0.001 | `--commission 0.002` |
-| `--slippage` | Price slippage (%) | 0.0 | `--slippage 0.001` |
+| `--commission` | Trading commission rate | 0.001 | `--commission 0.002` |
+| `--slippage-model` | Slippage model type | none | `--slippage-model volatility` |
+| `--slippage` | Slippage value (model-specific) | 0.0 | `--slippage 0.001` |
+| `--slippage-max` | Max slippage for adaptive models | 0.01 | `--slippage-max 0.02` |
 | `--output` / `-o` | Output file for results | stdout | `--output result.json` |
 | `--format` | Output format (json/csv/text) | text | `--format json` |
+
+**Slippage Models:**
+
+| Model | Description | Use Case |
+|-------|-------------|----------|
+| `none` | No slippage (perfect execution) | Baseline testing |
+| `fixed` | Fixed amount per trade | Conservative estimate |
+| `percentage` | Percentage of fill price | Proportional impact |
+| `volatility` | Adaptive to market volatility | Realistic simulation |
+| `volume` | Based on order/volume ratio | Market impact modeling |
 
 **Examples:**
 
@@ -129,12 +141,38 @@ trader backtest \
   --data data/ETHUSDT_4h.csv \
   --cash 100000
 
-# With realistic fees and slippage
+# With realistic fees and percentage slippage
 trader backtest \
   --strategy strategies/rsi_reversal.yaml \
   --data data/BTCUSDT_1h.csv \
   --commission 0.001 \
+  --slippage-model percentage \
   --slippage 0.0005
+
+# With volatility-based slippage (adaptive)
+trader backtest \
+  --strategy strategies/trend_following.yaml \
+  --data data/BTCUSDT_1h.csv \
+  --commission 0.001 \
+  --slippage-model volatility \
+  --slippage 0.001 \
+  --slippage-max 0.01
+
+# With volume-based slippage (market impact)
+trader backtest \
+  --strategy strategies/breakout.yaml \
+  --data data/BTCUSDT_1h.csv \
+  --commission 0.002 \
+  --slippage-model volume \
+  --slippage 0.0001 \
+  --slippage-max 0.005
+
+# No slippage for baseline comparison
+trader backtest \
+  --strategy strategies/ema_cross.yaml \
+  --data data/BTCUSDT_1h.csv \
+  --commission 0.001 \
+  --slippage-model none
 
 # Save results to JSON
 trader backtest \

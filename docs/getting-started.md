@@ -146,6 +146,27 @@ risk:
   --cash 10000
 ```
 
+**With Realistic Execution:**
+
+```bash
+# Add commission and slippage for realistic simulation
+./trader backtest \
+  --strategy my_first_strategy.yaml \
+  --data your_data.csv \
+  --cash 10000 \
+  --commission 0.001 \
+  --slippage-model percentage \
+  --slippage 0.0005
+```
+
+**Slippage Model Options:**
+- `none` - Perfect execution (baseline)
+- `percentage` - Fixed percentage (simple)
+- `volatility` - Adapts to market conditions (realistic)
+- `volume` - Market impact based on order size (advanced)
+
+See [CLI Reference](cli.md) for more options.
+
 ### 4. View Results
 
 ```
