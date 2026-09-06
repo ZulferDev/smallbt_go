@@ -1,0 +1,82 @@
+strategy:
+  name: sma_cross_normalized
+  version: "1"
+  description: "SMA crossover strategy with normalized price data for better stability across different price ranges"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 4h
+  
+  # Data preprocessing pipeline
+  transforms:
+    enabled: true
+    chain:
+      # First normalize close prices to 0-1 range for stability
+      - type: normalize
+        params:
+          columns: [close]
+          method: minmax
+          window: 100
+      
+      # Smooth volume data to reduce noise
+      - type: smooth
+        params:
+          columns: [volume]
+          window: 5
+          method: sma
+
+indicators:
+  # Fast SMA on normalized close
+  sma_fast:
+    type: sma
+    source: close
+    period: 9
+
+  # Slow SMA on normalized close  
+  sma_slow:
+    type: sma
+    source: close
+    period: 21
+
+  # Volume average on smoothed volume
+  volume_avg:
+    type: sma
+    source: volume
+    period: 20
+
+  # Volume confirmation
+  volume_ratio:
+    type: divide
+    left: volume
+    right: volume_avg
+
+entry:
+  long:
+    all:
+      # Price momentum: fast crosses above slow
+      - cross_above: [sma_fast, sma_slow]
+      
+      # Volume confirmation: above average
+      - gt: [volume_ratio, 1.2]
+
+exit:
+  long:
+    any:
+      # Exit when fast crosses below slow
+      - cross_below: [sma_fast, sma_slow]
+      
+      # Exit on low volume (loss of momentum)
+      - lt: [volume_ratio, 0.8]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.1
+
+  stop_loss:
+    type: percentage
+    value: 0.02
+
+  take_profit:
+    type: percentage
+    value: 0.04

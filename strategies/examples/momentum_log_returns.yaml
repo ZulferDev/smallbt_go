@@ -1,0 +1,97 @@
+strategy:
+  name: momentum_log_returns
+  version: "1"
+  description: "Momentum strategy using log returns for better statistical properties and handling of compounding"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+  
+  # Transform price to log returns for momentum analysis
+  transforms:
+    enabled: true
+    chain:
+      # Convert close prices to log returns
+      - type: log_returns
+        params:
+          columns: [close]
+          periods: 1
+      
+      # Normalize returns for cross-sectional comparison
+      - type: normalize
+        params:
+          columns: [close]
+          method: zscore
+          window: 50
+
+indicators:
+  # Fast momentum on log returns
+  momentum_fast:
+    type: sma
+    source: close
+    period: 5
+
+  # Slow momentum on log returns
+  momentum_slow:
+    type: sma
+    source: close
+    period: 20
+
+  # Momentum divergence
+  momentum_diff:
+    type: subtract
+    left: momentum_fast
+    right: momentum_slow
+
+  # RSI for overbought/oversold
+  rsi:
+    type: rsi
+    source: close
+    period: 14
+
+entry:
+  long:
+    all:
+      # Strong positive momentum
+      - gt: [momentum_diff, 0.5]
+      
+      # Not overbought
+      - lt: [rsi, 70]
+
+  short:
+    all:
+      # Strong negative momentum
+      - lt: [momentum_diff, -0.5]
+      
+      # Not oversold
+      - gt: [rsi, 30]
+
+exit:
+  long:
+    any:
+      # Momentum reversal
+      - lt: [momentum_diff, 0]
+      
+      # Overbought
+      - gt: [rsi, 75]
+
+  short:
+    any:
+      # Momentum reversal
+      - gt: [momentum_diff, 0]
+      
+      # Oversold
+      - lt: [rsi, 25]
+
+risk:
+  position_size:
+    type: risk_percent
+    value: 0.02
+
+  stop_loss:
+    type: percentage
+    value: 0.03
+
+  take_profit:
+    type: risk_reward
+    ratio: 2.0
