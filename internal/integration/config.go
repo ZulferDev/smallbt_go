@@ -85,6 +85,16 @@ func buildTransform(spec TransformSpec) (transform.Transform, error) {
 			Window: window,
 		}, nil
 
+	case "difference":
+		order, err := getIntParam(spec.Params, "order", 1)
+		if err != nil {
+			return nil, err
+		}
+		return &transform.DifferencingTransform{
+			Field: spec.Field,
+			Order: order,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown transform type: %s", spec.Type)
 	}
@@ -228,6 +238,18 @@ func ValidateTransformConfig(config *TransformConfig) error {
 			}
 			if window < 2 {
 				return fmt.Errorf("transform %d (zscore): window must be >= 2", i)
+			}
+
+		case "difference":
+			if spec.Field == "" {
+				return fmt.Errorf("transform %d (difference): field is required", i)
+			}
+			order, err := getIntParam(spec.Params, "order", 1)
+			if err != nil {
+				return fmt.Errorf("transform %d (difference): %w", i, err)
+			}
+			if order < 1 || order > 3 {
+				return fmt.Errorf("transform %d (difference): order must be between 1 and 3", i)
 			}
 
 		default:

@@ -1,0 +1,65 @@
+strategy:
+  name: momentum_differencing
+  version: "1"
+  description: "Momentum strategy using price differencing (velocity)"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+  
+  transforms:
+    enabled: true
+    transforms:
+      # First-order differencing: price velocity (change)
+      # Positive = upward momentum, Negative = downward momentum
+      - type: difference
+        field: close
+        params:
+          order: 1
+
+indicators:
+  # SMA on differenced values to smooth momentum
+  momentum_avg:
+    type: sma
+    source: close  # Already differenced by transform
+    period: 10
+  
+  # Volume for confirmation
+  volume_avg:
+    type: sma
+    source: volume
+    period: 20
+  
+  # RSI for overbought/oversold
+  rsi:
+    type: rsi
+    source: close
+    period: 14
+
+entry:
+  long:
+    # Enter when momentum is positive and accelerating
+    all:
+      - gt: [close, 0]              # Positive momentum (price rising)
+      - gt: [close, momentum_avg]   # Accelerating (momentum > avg)
+      - gt: [volume, volume_avg]    # Volume confirmation
+      - lt: [rsi, 70]               # Not overbought
+
+exit:
+  long:
+    any:
+      - lt: [close, 0]              # Momentum turned negative
+      - gt: [rsi, 75]               # Overbought
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.3
+
+  stop_loss:
+    type: percentage
+    value: 0.03
+
+  take_profit:
+    type: percentage
+    value: 0.06
