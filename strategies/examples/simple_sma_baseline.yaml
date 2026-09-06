@@ -1,0 +1,42 @@
+strategy:
+  name: simple_sma_baseline
+  version: "1"
+  description: "Simple SMA crossover baseline (no transforms)"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+
+indicators:
+  sma_short:
+    type: sma
+    source: close
+    period: 5
+  
+  sma_long:
+    type: sma
+    source: close
+    period: 10
+
+entry:
+  long:
+    all:
+      - cross_above: [sma_short, sma_long]
+
+exit:
+  long:
+    any:
+      - cross_below: [sma_short, sma_long]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.95
+
+  stop_loss:
+    type: percentage
+    value: 0.10
+
+  take_profit:
+    type: percentage
+    value: 0.20

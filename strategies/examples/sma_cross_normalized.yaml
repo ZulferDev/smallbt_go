@@ -11,15 +11,9 @@ data:
   transforms:
     enabled: true
     transforms:
-      # First normalize close prices to 0-1 range for stability
+      # Normalize close prices to 0-1 range for stability
       - type: normalize
         field: close
-      
-      # Smooth volume data to reduce noise
-      - type: smooth
-        field: volume
-        params:
-          period: 5
 
 indicators:
   # Fast SMA on normalized close
@@ -34,7 +28,7 @@ indicators:
     source: close
     period: 21
 
-  # Volume average on smoothed volume
+  # Volume average
   volume_avg:
     type: sma
     source: volume

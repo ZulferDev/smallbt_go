@@ -1,0 +1,55 @@
+strategy:
+  name: simple_scale_test
+  version: "1"
+  description: "Simple strategy to test scale transform with guaranteed trades"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+  
+  # Test scale transform
+  transforms:
+    enabled: true
+    transforms:
+      # Scale close by 0.001 (convert to thousands)
+      - type: scale
+        field: close
+        params:
+          factor: 0.001
+
+indicators:
+  # Simple SMA on scaled data
+  sma_short:
+    type: sma
+    source: close
+    period: 5
+  
+  sma_long:
+    type: sma
+    source: close
+    period: 10
+
+entry:
+  long:
+    all:
+      # Simple crossover
+      - cross_above: [sma_short, sma_long]
+
+exit:
+  long:
+    any:
+      # Exit on reverse crossover
+      - cross_below: [sma_short, sma_long]
+
+risk:
+  position_size:
+    type: percent_equity
+    value: 0.95  # Use most of capital
+
+  stop_loss:
+    type: percentage
+    value: 0.10  # 10% stop
+
+  take_profit:
+    type: percentage
+    value: 0.20  # 20% profit target
