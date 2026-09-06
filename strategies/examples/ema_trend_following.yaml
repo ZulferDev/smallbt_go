@@ -1,0 +1,68 @@
+strategy:
+  name: ema_trend_following
+  version: "1"
+  description: "Trend following strategy using EMA-smoothed prices"
+
+data:
+  symbol: BTCUSDT
+  timeframe: 1h
+  
+  transforms:
+    enabled: true
+    transforms:
+      # EMA smoothing to reduce noise while preserving trend
+      # Faster response than SMA
+      - type: ema_smooth
+        field: close
+        params:
+          period: 12
+
+indicators:
+  # Fast EMA on smoothed prices
+  ema_fast:
+    type: ema
+    source: close  # Already EMA-smoothed by transform
+    period: 5
+  
+  # Slow EMA on smoothed prices
+  ema_slow:
+    type: ema
+    source: close
+    period: 13
+  
+  # Volume confirmation
+  volume_avg:
+    type: sma
+    source: volume
+    period: 20
+  
+  # ATR for volatility-based stops
+  atr:
+    type: atr
+    period: 14
+
+entry:
+  long:
+    # Enter on EMA crossover with volume confirmation
+    all:
+      - cross_above: [ema_fast, ema_slow]
+      - gt: [volume, volume_avg]
+
+exit:
+  long:
+    any:
+      - cross_below: [ema_fast, ema_slow]
+
+risk:
+  position_size:
+    type: risk_percent
+    value: 0.01
+
+  stop_loss:
+    type: atr
+    period: 14
+    multiplier: 2.0
+
+  take_profit:
+    type: risk_reward
+    ratio: 2.5

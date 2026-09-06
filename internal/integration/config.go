@@ -95,6 +95,16 @@ func buildTransform(spec TransformSpec) (transform.Transform, error) {
 			Order: order,
 		}, nil
 
+	case "ema_smooth":
+		period, err := getIntParam(spec.Params, "period", 10)
+		if err != nil {
+			return nil, err
+		}
+		return &transform.EMASmooth{
+			Field:  spec.Field,
+			Period: period,
+		}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown transform type: %s", spec.Type)
 	}
@@ -250,6 +260,18 @@ func ValidateTransformConfig(config *TransformConfig) error {
 			}
 			if order < 1 || order > 3 {
 				return fmt.Errorf("transform %d (difference): order must be between 1 and 3", i)
+			}
+
+		case "ema_smooth":
+			if spec.Field == "" {
+				return fmt.Errorf("transform %d (ema_smooth): field is required", i)
+			}
+			period, err := getIntParam(spec.Params, "period", 10)
+			if err != nil {
+				return fmt.Errorf("transform %d (ema_smooth): %w", i, err)
+			}
+			if period < 2 {
+				return fmt.Errorf("transform %d (ema_smooth): period must be >= 2", i)
 			}
 
 		default:
