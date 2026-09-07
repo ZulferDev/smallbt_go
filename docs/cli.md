@@ -1485,3 +1485,206 @@ Stable parameters should:
 - Show consistent performance in top N results
 - Work across different time periods
 
+
+---
+
+## report
+
+Generate professional reports from backtest results in multiple formats.
+
+### Basic Usage
+
+```bash
+# Generate HTML report
+trader report --result backtest_result.json --format html --output report.html
+
+# Generate Markdown report
+trader report --result backtest_result.json --format markdown --output report.md
+
+# Generate text report to console
+trader report --result backtest_result.json --format text
+```
+
+### Report Formats
+
+#### HTML Report
+Professional HTML report with embedded CSS styling:
+```bash
+trader report \
+  --result results/my_strategy.json \
+  --format html \
+  --output reports/my_strategy.html \
+  --title "EMA Crossover Strategy Analysis" \
+  --theme dark
+```
+
+Features:
+- Responsive design
+- Light/dark themes
+- Professional styling with tables and metrics
+- Color-coded performance indicators (green/red)
+- Strategy summary, metrics, and trade history
+
+#### Markdown Report
+GitHub-compatible Markdown with proper tables:
+```bash
+trader report \
+  --result results/my_strategy.json \
+  --format markdown \
+  --output reports/my_strategy.md \
+  --title "Strategy Performance Report"
+```
+
+Features:
+- Proper Markdown tables
+- Headers and sections
+- Easy to version control
+- Compatible with GitHub/GitLab
+
+#### Text Report
+Console-friendly plain text output:
+```bash
+trader report \
+  --result results/my_strategy.json \
+  --format text
+```
+
+Features:
+- Unicode box-drawing characters
+- Aligned columns
+- Suitable for terminal display or log files
+
+### Report Sections
+
+All formats include:
+1. **Strategy Summary**: Name, symbol, timeframe, period, initial cash, final equity
+2. **Performance Metrics**: Returns (Total, CAGR), risk-adjusted metrics (Sharpe, Sortino, Calmar), risk metrics (Max Drawdown, Avg Drawdown), trade statistics (Win Rate, Profit Factor, total trades, avg win/loss)
+3. **Trade History**: Summary of all completed trades with entry/exit times, prices, PnL
+
+### Report Flags
+
+| Flag | Type | Description | Default |
+|------|------|-------------|---------|
+| `--result` | string | Path to backtest result JSON | Required |
+| `--format` | string | Output format: html, markdown, text | html |
+| `--output` | string | Output file path (omit for stdout) | - |
+| `--title` | string | Report title | "Backtest Report" |
+| `--theme` | string | HTML theme: light or dark | light |
+| `--no-css` | bool | Exclude CSS from HTML output | false |
+
+### Examples
+
+#### Complete Workflow: Backtest → Report
+
+```bash
+# 1. Run backtest and save results
+trader backtest \
+  --strategy strategies/ema_cross.yaml \
+  --data data/BTCUSDT_4h.parquet \
+  --output results/ema_cross_2024.json
+
+# 2. Generate HTML report with dark theme
+trader report \
+  --result results/ema_cross_2024.json \
+  --format html \
+  --output reports/ema_cross_2024.html \
+  --title "EMA Crossover - BTC 2024" \
+  --theme dark
+
+# 3. Generate Markdown for documentation
+trader report \
+  --result results/ema_cross_2024.json \
+  --format markdown \
+  --output docs/strategy_results.md
+
+# 4. Quick console review
+trader report \
+  --result results/ema_cross_2024.json \
+  --format text
+```
+
+#### Batch Report Generation
+
+```bash
+#!/bin/bash
+# Generate reports for all backtest results
+
+for result in results/*.json; do
+  name=$(basename "$result" .json)
+  
+  # HTML report
+  trader report \
+    --result "$result" \
+    --format html \
+    --output "reports/${name}.html" \
+    --title "$name"
+  
+  # Markdown report
+  trader report \
+    --result "$result" \
+    --format markdown \
+    --output "reports/${name}.md" \
+    --title "$name"
+done
+
+echo "Generated reports for $(ls results/*.json | wc -l) backtests"
+```
+
+#### Custom Styling
+
+For HTML reports without embedded CSS (to use custom stylesheet):
+```bash
+trader report \
+  --result results/my_strategy.json \
+  --format html \
+  --output reports/my_strategy.html \
+  --no-css
+
+# Then add your own <link> tag in the HTML file
+```
+
+### Report Output Examples
+
+#### HTML Output Features
+- Strategy name and parameters in header
+- Color-coded metrics (green for positive, red for negative)
+- Responsive tables that work on mobile
+- Dark theme for reduced eye strain
+- Professional appearance suitable for client presentations
+
+#### Markdown Output Features
+- Proper table formatting with alignment
+- Compatible with GitHub/GitLab rendering
+- Easy to include in documentation
+- Version control friendly
+
+#### Text Output Features
+- Clean terminal display
+- Unicode box characters for visual separation
+- Suitable for logging or email
+- No markup overhead
+
+### Integration with Other Commands
+
+```bash
+# Backtest → Report
+trader backtest --strategy s.yaml --data d.csv --output r.json
+trader report --result r.json --format html --output report.html
+
+# Walk Forward → Report (for each window)
+trader walkforward --strategy s.yaml --data d.csv --csv-windows windows.csv
+# Then generate reports for train/test results
+
+# Monte Carlo → Report (original backtest)
+trader montecarlo --result r.json --simulations 1000
+trader report --result r.json --format html --output base_report.html
+```
+
+### Tips
+
+1. **Use descriptive titles**: Help identify reports later
+2. **Dark theme for presentations**: Easier on eyes in dark rooms
+3. **Markdown for documentation**: Version control friendly
+4. **Text for quick review**: Fast console preview
+5. **Batch generation**: Automate report creation for multiple strategies
+
