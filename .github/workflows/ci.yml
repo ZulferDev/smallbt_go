@@ -222,7 +222,7 @@ jobs:
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
 
       - name: Run GoSec
-        run: gosec -conf .gosec.yaml ./...
+        run: gosec -exclude=G404,G304,G306,G703 ./...
 
   docs:
     name: Documentation Check
