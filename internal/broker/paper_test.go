@@ -354,8 +354,28 @@ func TestPaperBroker_BackgroundProcessing_MultipleOrders(t *testing.T) {
 		orderIDs = append(orderIDs, orderID)
 	}
 
-	// Wait for all orders to process
-	time.Sleep(250 * time.Millisecond)
+	// Wait for all orders to process with retry
+	// This makes the test more reliable in CI environments
+	timeout := time.After(1 * time.Second)
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	allFilled := false
+	for !allFilled {
+		select {
+		case <-timeout:
+			t.Fatal("Timeout waiting for orders to be filled")
+		case <-ticker.C:
+			allFilled = true
+			for _, orderID := range orderIDs {
+				qo, exists := broker.orderQueue.Get(orderID)
+				if !exists || qo.Status != StatusFilled {
+					allFilled = false
+					break
+				}
+			}
+		}
+	}
 
 	// Verify all orders filled
 	for i, orderID := range orderIDs {
