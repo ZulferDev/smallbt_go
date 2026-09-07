@@ -6,23 +6,30 @@ linters:
     - govet
     - staticcheck
     - unused
+  disable-all: false
 
 linters-settings:
   errcheck:
-    # Exclude test files from errcheck since test code often
-    # intentionally ignores errors for brevity
+    # Check only production code, not test code
+    check-type-assertions: false
+    check-blank: false
+    # Exclude common cleanup functions
     exclude-functions:
       - (*os.File).Close
       - (*database/sql.Rows).Close
       - (*database/sql.Stmt).Close
 
 issues:
-  # Exclude errcheck warnings in test files
+  # Exclude all errcheck warnings in test files
   exclude-rules:
-    - path: _test\.go
+    - path: _test\.go$
       linters:
         - errcheck
-    - path: _bench_test\.go
+    - path: _bench_test\.go$
+      linters:
+        - errcheck
+    # Also exclude test directories
+    - path: "internal/.*/.*_test\\.go"
       linters:
         - errcheck
 
@@ -32,3 +39,8 @@ run:
   skip-dirs:
     - vendor
     - third_party
+  
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
