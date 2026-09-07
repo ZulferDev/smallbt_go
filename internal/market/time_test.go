@@ -102,3 +102,117 @@ func TestTimeArithmetic(t *testing.T) {
 		t.Errorf("expected 1 hour difference, got %v", diff)
 	}
 }
+
+func TestNow(t *testing.T) {
+	now := Now()
+	if now.IsZero() {
+		t.Error("Now() returned zero time")
+	}
+	if now.Location() != time.UTC {
+		t.Error("Now() should return UTC time")
+	}
+}
+
+func TestUnix(t *testing.T) {
+	timestamp := int64(1609459200)
+	mt := Unix(timestamp, 0)
+	if mt.Unix() != timestamp {
+		t.Errorf("Unix(%d, 0) returned %d", timestamp, mt.Unix())
+	}
+	if mt.Location() != time.UTC {
+		t.Error("Unix() should return UTC time")
+	}
+}
+
+func TestTime_IsZero(t *testing.T) {
+	zero := Time{}
+	if !zero.IsZero() {
+		t.Error("Zero Time should report IsZero() = true")
+	}
+	
+	nonZero := Now()
+	if nonZero.IsZero() {
+		t.Error("Non-zero Time should report IsZero() = false")
+	}
+}
+
+func TestTime_String(t *testing.T) {
+	mt := Unix(1609459200, 0)
+	str := mt.String()
+	if str == "" {
+		t.Error("String() returned empty string")
+	}
+}
+
+func TestTime_Format(t *testing.T) {
+	mt := Unix(1609459200, 0)
+	formatted := mt.Format("2006-01-02")
+	if formatted != "2021-01-01" {
+		t.Errorf("Format() = %q, want '2021-01-01'", formatted)
+	}
+}
+
+func TestTime_MarshalJSON(t *testing.T) {
+	mt := Unix(1609459200, 0)
+	data, err := mt.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON() error: %v", err)
+	}
+	if len(data) == 0 {
+		t.Error("MarshalJSON() returned empty data")
+	}
+}
+
+func TestTime_UnmarshalJSON(t *testing.T) {
+	var mt Time
+	err := mt.UnmarshalJSON([]byte(`"2021-01-01T00:00:00Z"`))
+	if err != nil {
+		t.Errorf("UnmarshalJSON() error: %v", err)
+	}
+	if mt.IsZero() {
+		t.Error("UnmarshalJSON() resulted in zero time")
+	}
+}
+
+func TestTime_MarshalText(t *testing.T) {
+	mt := Unix(1609459200, 0)
+	data, err := mt.MarshalText()
+	if err != nil {
+		t.Fatalf("MarshalText() error: %v", err)
+	}
+	if len(data) == 0 {
+		t.Error("MarshalText() returned empty data")
+	}
+}
+
+func TestTime_UnmarshalText(t *testing.T) {
+	var mt Time
+	err := mt.UnmarshalText([]byte("2021-01-01T00:00:00Z"))
+	if err != nil {
+		t.Errorf("UnmarshalText() error: %v", err)
+	}
+}
+
+func TestTime_Local(t *testing.T) {
+	mt := Unix(1609459200, 0).UTC()
+	local := mt.Local()
+	if mt.Unix() != local.Unix() {
+		t.Error("Local() changed the instant in time")
+	}
+}
+
+func TestTime_UTC(t *testing.T) {
+	mt := Unix(1609459200, 0)
+	utc := mt.UTC()
+	if utc.Location() != time.UTC {
+		t.Error("UTC() did not return UTC time")
+	}
+}
+
+func TestTime_In(t *testing.T) {
+	mt := Unix(1609459200, 0)
+	utc := mt.In(time.UTC)
+	if utc.Location() != time.UTC {
+		t.Error("In(UTC) did not change location")
+	}
+}
