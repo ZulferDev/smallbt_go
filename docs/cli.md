@@ -1032,3 +1032,336 @@ trader export-trades \
 # Now you have complete documentation for this version
 ```
 
+
+---
+
+## Optimization CSV Export
+
+### Export All Results
+
+Export complete optimization results to CSV format:
+
+```bash
+trader optimize \
+  --strategy strategy.yaml \
+  --data historical.csv \
+  --parameters "indicators.ema_fast.period:5:20:1,indicators.ema_slow.period:20:100:5" \
+  --objective sharpe \
+  --csv optimization_results.csv
+```
+
+**CSV Columns:**
+
+The optimization CSV includes:
+- Rank
+- ObjectiveValue
+- All parameter values
+- TotalReturn_%
+- CAGR_%
+- SharpeRatio
+- SortinoRatio
+- MaxDrawdown_%
+- WinRate_%
+- ProfitFactor
+- Expectancy
+- TotalTrades
+- WinningTrades
+- LosingTrades
+- AvgWin
+- AvgLoss
+
+---
+
+### Export Top N Results
+
+Export only the best N parameter combinations:
+
+```bash
+trader optimize \
+  --strategy strategy.yaml \
+  --data historical.csv \
+  --parameters "indicators.ema_fast.period:5:20:1" \
+  --objective sharpe \
+  --csv top_results.csv \
+  --top 10
+```
+
+This exports only the top 10 best parameter combinations, making it easier to focus on the most promising configurations.
+
+---
+
+### Parameter Sensitivity Analysis
+
+Analyze how each parameter affects the optimization objective:
+
+```bash
+trader optimize \
+  --strategy strategy.yaml \
+  --data historical.csv \
+  --parameters "indicators.ema_fast.period:5:20:1,indicators.ema_slow.period:20:100:5" \
+  --objective sharpe \
+  --sensitivity sensitivity_analysis.csv
+```
+
+**Sensitivity CSV Columns:**
+
+- Parameter: Parameter name
+- MinValue: Minimum value tested
+- MaxValue: Maximum value tested
+- Range: Value range (max - min)
+- BestValue: Parameter value that produced best objective
+- WorstValue: Parameter value that produced worst objective
+- AvgObjective: Average objective value across all combinations
+- StdDevObjective: Standard deviation of objective
+- Correlation: Correlation coefficient with objective (-1 to 1)
+- Sensitivity: Classification (Low/Medium/High)
+
+**Interpreting Sensitivity:**
+
+- **High Correlation** (|r| > 0.7): Strong relationship with performance
+  - Positive correlation: Higher values → better performance
+  - Negative correlation: Lower values → better performance
+
+- **High Sensitivity**: Large impact on results
+  - Small changes cause large performance swings
+  - Requires careful tuning
+
+- **Low Sensitivity**: Minimal impact on results
+  - May not need optimization
+  - Stable across value range
+
+---
+
+### Complete Optimization Workflow
+
+Export all analysis formats in one command:
+
+```bash
+trader optimize \
+  --strategy my_strategy.yaml \
+  --data BTCUSDT_5000h.csv \
+  --parameters "indicators.ema_fast.period:5:20:1,indicators.ema_slow.period:20:100:5" \
+  --objective sharpe \
+  --parallel 4 \
+  --output optimization_full.json \
+  --csv optimization_all.csv \
+  --top 20 \
+  --sensitivity parameter_analysis.csv
+```
+
+**Note:** When using `--top N` with `--csv`, the CSV will contain only top N results. For all results, use a separate `--csv` without `--top`.
+
+To export both:
+```bash
+# Run optimization once, save JSON
+trader optimize ... --output results.json
+
+# Then export different formats
+# (Feature coming soon: separate export command)
+```
+
+---
+
+## Optimization Analysis Examples
+
+### Example 1: Find Optimal EMA Periods
+
+```bash
+trader optimize \
+  --strategy strategies/ema_cross.yaml \
+  --data data/BTCUSDT.csv \
+  --parameters "indicators.ema_fast.period:5:30:1,indicators.ema_slow.period:20:200:5" \
+  --objective sharpe \
+  --parallel 8 \
+  --csv ema_optimization.csv \
+  --sensitivity ema_sensitivity.csv
+```
+
+**Analysis Steps:**
+1. Open `ema_sensitivity.csv` in spreadsheet
+2. Check correlation for each parameter
+3. If `ema_fast` has high correlation but `ema_slow` has low correlation:
+   - `ema_fast` needs careful tuning
+   - `ema_slow` can use a fixed value
+4. Open `ema_optimization.csv`
+5. Sort by SharpeRatio descending
+6. Review top 10 parameter combinations
+7. Check consistency of best parameters
+
+---
+
+### Example 2: Detect Overfitting
+
+**Signs of Overfitting in Sensitivity Analysis:**
+
+1. **Very High Correlation** (|r| > 0.95):
+   - May indicate curve-fitting
+   - Test on out-of-sample data
+
+2. **Very High Sensitivity**:
+   - Small parameter changes cause huge swings
+   - Strategy may be unstable
+
+3. **BestValue at Extreme Edges**:
+   - If best value is at min or max of range
+   - Expand the search range
+   - May not have found true optimum
+
+**Example Check:**
+```bash
+# Run optimization
+trader optimize ... --sensitivity sensitivity.csv
+
+# Open sensitivity.csv
+# Look for:
+# - Correlations very close to ±1.0
+# - BestValue = MinValue or MaxValue
+# - Sensitivity = "High" for all parameters
+
+# If found, be cautious of overfitting
+```
+
+---
+
+### Example 3: Multi-Objective Analysis
+
+While the optimizer uses a single objective, you can analyze trade-offs in the CSV:
+
+```bash
+# Optimize for Sharpe
+trader optimize \
+  --strategy strategy.yaml \
+  --data data.csv \
+  --parameters "..." \
+  --objective sharpe \
+  --csv results.csv
+
+# Open results.csv in spreadsheet
+# Create scatter plots:
+# - SharpeRatio vs MaxDrawdown
+# - TotalReturn vs WinRate
+# - SharpeRatio vs TotalTrades
+
+# Look for parameter combinations that balance multiple goals
+```
+
+---
+
+### Example 4: Parameter Stability Test
+
+Test if parameters are stable across different market conditions:
+
+```bash
+# Optimize on 2023 data
+trader optimize \
+  --strategy strategy.yaml \
+  --data data_2023.csv \
+  --parameters "..." \
+  --objective sharpe \
+  --csv results_2023.csv \
+  --top 10
+
+# Optimize on 2024 data
+trader optimize \
+  --strategy strategy.yaml \
+  --data data_2024.csv \
+  --parameters "..." \
+  --objective sharpe \
+  --csv results_2024.csv \
+  --top 10
+
+# Compare top parameters from both years
+# Stable parameters should appear in both top 10 lists
+```
+
+---
+
+## Optimization Flags Reference
+
+| Flag | Type | Description | Default |
+|------|------|-------------|---------|
+| `--strategy` | string | Strategy YAML file | Required |
+| `--data` | string | Historical data file | Required |
+| `--parameters` | string | Parameter ranges to optimize | Required |
+| `--objective` | string | Optimization objective | sharpe |
+| `--direction` | string | maximize or minimize | maximize |
+| `--parallel` | int | Number of parallel workers | 1 |
+| `--output` | string | Output JSON file | - |
+| `--csv` | string | Export all results to CSV | - |
+| `--top` | int | Export only top N to CSV | 0 (all) |
+| `--sensitivity` | string | Export sensitivity analysis CSV | - |
+
+**Available Objectives:**
+- `sharpe`: Sharpe Ratio
+- `sortino`: Sortino Ratio
+- `return`: Total Return
+- `profit_factor`: Profit Factor
+- `calmar`: Calmar Ratio
+- `expectancy`: Expectancy
+- `win_rate`: Win Rate
+- `cagr`: CAGR
+
+---
+
+## Best Practices for Optimization
+
+### 1. Start with Coarse Grid
+
+```bash
+# First pass: Coarse grid
+trader optimize \
+  --parameters "ema_fast:5:30:5,ema_slow:20:200:20" \
+  --csv coarse.csv
+
+# Identify promising regions in coarse.csv
+# Then refine:
+
+# Second pass: Fine grid around best area
+trader optimize \
+  --parameters "ema_fast:10:20:1,ema_slow:40:80:5" \
+  --csv fine.csv
+```
+
+### 2. Always Export Sensitivity
+
+Understanding parameter sensitivity helps avoid overfitting:
+
+```bash
+trader optimize \
+  ... \
+  --sensitivity sensitivity.csv
+```
+
+Review correlation and sensitivity before trusting results.
+
+### 3. Use Parallel Workers
+
+Speed up optimization with multiple cores:
+
+```bash
+trader optimize \
+  ... \
+  --parallel 8  # Use 8 CPU cores
+```
+
+### 4. Validate Out-of-Sample
+
+Never trust in-sample optimization alone:
+
+```bash
+# Optimize on training data
+trader optimize --data train.csv --csv optimized.csv
+
+# Get best parameters from optimized.csv
+# Then test on validation data:
+trader backtest --strategy best_params.yaml --data validation.csv
+```
+
+### 5. Check for Stability
+
+Stable parameters should:
+- Not be at edge of search range
+- Have moderate sensitivity (not too high)
+- Show consistent performance in top N results
+- Work across different time periods
+
