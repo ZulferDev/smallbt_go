@@ -1,4 +1,3 @@
-# Gosec configuration for trading backtest engine
 exclude:
   - G404
   - G304
