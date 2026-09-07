@@ -29,7 +29,7 @@ func BenchmarkTransformedFeed_Next_100(b *testing.B) {
 	defer feed.Close()
 
 	chain := NewTransformChain(NewScaleTransform(2.0, "close"))
-	_ = NewTransformedFeed(feed, chain, 10) // Discard initial setup
+	_, _ = NewTransformedFeed(feed, chain, 10) // Discard initial setup
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
