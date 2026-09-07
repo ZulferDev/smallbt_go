@@ -19,7 +19,7 @@ import (
 // - Rank-based strategies
 // - Distribution-agnostic comparison
 type PercentileRankTransform struct {
-	_ TransformConfig
+	_      TransformConfig
 	Field  string `yaml:"field"`  // Which field to transform (close, volume, etc.)
 	Window int    `yaml:"window"` // Rolling window for percentile calculation
 }

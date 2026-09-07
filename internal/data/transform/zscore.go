@@ -17,7 +17,7 @@ import (
 // - Identifying outliers (|z| > 2 or 3)
 // - Mean reversion strategies
 type ZScoreTransform struct {
-	_ TransformConfig
+	_      TransformConfig
 	Field  string `yaml:"field"`  // Which field to normalize (close, volume, etc.)
 	Window int    `yaml:"window"` // Rolling window for mean/stddev calculation
 }
