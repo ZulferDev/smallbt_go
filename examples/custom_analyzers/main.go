@@ -265,7 +265,8 @@ func (m *MonthlyBreakdownAnalyzer) Calculate(input analytics.AnalysisInput) (int
 }
 
 func main() {
-	fmt.Println("=== Custom Analyzer Demo ===\n")
+	fmt.Println("=== Custom Analyzer Demo ===")
+	fmt.Println()
 
 	// Register all custom analyzers
 	fmt.Println("Registering custom analyzers...")
@@ -329,13 +330,15 @@ func main() {
 	fmt.Printf("  Final equity: $%.2f\n\n", input.FinalEquity)
 
 	// Calculate all custom metrics
-	fmt.Println("Calculating custom metrics...\n")
+	fmt.Println("Calculating custom metrics...")
+	fmt.Println()
 	results := analytics.CalculateAll(input)
 
 	// Display results
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println("CUSTOM ANALYZER RESULTS")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println()
 
 	// Win/Loss streaks
 	if maxWinStreak, ok := results["max_win_streak"].(int); ok {

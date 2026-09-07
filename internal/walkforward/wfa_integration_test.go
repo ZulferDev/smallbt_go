@@ -118,7 +118,7 @@ func TestWalkForwardIntegration(t *testing.T) {
 	
 	// Sharpe ratio should be average of test Sharpe: (1.2+1.3+1.4+1.5)/4 = 1.35
 	expectedSharpe := (1.2 + 1.3 + 1.4 + 1.5) / 4.0
-	if agg.SharpeRatio != expectedSharpe {
+	if diff := agg.SharpeRatio - expectedSharpe; diff < -0.0001 || diff > 0.0001 {
 		t.Errorf("SharpeRatio: got %f, want %f", agg.SharpeRatio, expectedSharpe)
 	}
 	
