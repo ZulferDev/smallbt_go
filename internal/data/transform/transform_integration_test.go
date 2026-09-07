@@ -374,7 +374,7 @@ func TestTransform_ValidateBeforeApply(t *testing.T) {
 	}
 
 	// Should also fail on Apply
-	_, err := invalid.Apply(candles)
+	_, _ = invalid.Apply(candles)
 }
 
 func TestMovingAverageSmooth_InsufficientData(t *testing.T) {
