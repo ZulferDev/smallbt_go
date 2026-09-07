@@ -116,7 +116,13 @@ func (q *OrderQueue) Get(orderID string) (*QueuedOrder, bool) {
 	defer q.mu.RUnlock()
 
 	qo, exists := q.orders[orderID]
-	return qo, exists
+	if !exists {
+		return nil, false
+	}
+	
+	// Return a copy to prevent concurrent access issues
+	copy := *qo
+	return &copy, true
 }
 
 // Count returns the total number of orders in the queue
