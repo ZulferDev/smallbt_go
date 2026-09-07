@@ -1,0 +1,34 @@
+linters:
+  enable:
+    - errcheck
+    - gofmt
+    - goimports
+    - govet
+    - staticcheck
+    - unused
+
+linters-settings:
+  errcheck:
+    # Exclude test files from errcheck since test code often
+    # intentionally ignores errors for brevity
+    exclude-functions:
+      - (*os.File).Close
+      - (*database/sql.Rows).Close
+      - (*database/sql.Stmt).Close
+
+issues:
+  # Exclude errcheck warnings in test files
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+    - path: _bench_test\.go
+      linters:
+        - errcheck
+
+run:
+  timeout: 5m
+  tests: true
+  skip-dirs:
+    - vendor
+    - third_party
