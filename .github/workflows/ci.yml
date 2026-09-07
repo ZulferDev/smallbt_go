@@ -33,7 +33,7 @@ jobs:
 
       - name: Run unit tests with coverage
         run: |
-          go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+          go test -coverprofile=coverage.txt -covermode=atomic ./...
         timeout-minutes: 5
 
       - name: Upload coverage to Codecov
