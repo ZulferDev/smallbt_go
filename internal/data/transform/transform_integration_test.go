@@ -375,9 +375,6 @@ func TestTransform_ValidateBeforeApply(t *testing.T) {
 
 	// Should also fail on Apply
 	_, err := invalid.Apply(candles)
-	if err != nil {
-		// This is expected - invalid config might be caught during apply
-	}
 }
 
 func TestMovingAverageSmooth_InsufficientData(t *testing.T) {

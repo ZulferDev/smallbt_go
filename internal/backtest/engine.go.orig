@@ -470,6 +470,7 @@ func runBacktestLoop(
 						sl, err = stopLossCalc.Calculate(candle.Close, "long", atrValue)
 						if err == nil && sl > 0 {
 							stopDist = absPrice(candle.Close - sl)
+						} else if err != nil {
 						}
 					}
 					if positionSizer != nil {
