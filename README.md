@@ -229,6 +229,7 @@ data:
 | Guide | Description |
 |-------|-------------|
 | [Getting Started](docs/getting-started.md) | Complete beginner to advanced tutorial |
+| [CSV Format Guide](docs/CSV_FORMAT.md) | Flexible CSV formats, troubleshooting, and best practices |
 | [Transform Guide](docs/transforms.md) | Data preprocessing and normalization |
 | [CLI Reference](docs/cli.md) | Complete command-line reference |
 | [Indicator Reference](docs/indicators.md) | All indicators with formulas and examples |

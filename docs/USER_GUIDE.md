@@ -1051,22 +1051,30 @@ state:                      # Optional stateful variables
 
 ### CSV Format
 
-Required columns:
-```csv
-timestamp,open,high,low,close,volume
-```
+The engine supports flexible CSV formats with automatic column detection from headers.
 
-Example:
+**Quick Start - Standard Format:**
 ```csv
 timestamp,open,high,low,close,volume
 2023-01-01T00:00:00Z,20000.00,20100.00,19900.00,20050.00,1234.56
 2023-01-01T01:00:00Z,20050.00,20150.00,20000.00,20100.00,2345.67
 ```
 
-**Timestamp formats accepted:**
+**Key Features:**
+- ✓ Automatic column detection from headers
+- ✓ Flexible column ordering (any order supported)
+- ✓ Case-insensitive headers (TIMESTAMP, Open, HIGH, etc.)
+- ✓ Alternative names (time, date, datetime, vol)
+- ✓ Multiple timestamp formats including milliseconds
+
+**Supported Timestamp Formats:**
 - RFC3339: `2023-01-01T00:00:00Z`
 - ISO8601: `2023-01-01T00:00:00+00:00`
-- Unix timestamp: `1672531200`
+- With milliseconds: `2023-01-01 00:00:00.000`
+- Unix timestamp: `1672531200` (seconds or milliseconds)
+
+**For complete CSV format documentation, troubleshooting, and advanced usage, see:**
+→ [CSV_FORMAT.md](CSV_FORMAT.md)
 
 ### Parquet Format
 
