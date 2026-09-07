@@ -55,6 +55,54 @@ func DefaultCSVConfig(symbol market.Symbol, timeframe market.Timeframe) CSVConfi
 	}
 }
 
+// autoDetectColumns detects column indices from CSV headers.
+// Supports flexible header names (case-insensitive).
+func autoDetectColumns(headers []string, config *CSVConfig) error {
+	// Map to store found columns
+	found := make(map[string]bool)
+	
+	for i, header := range headers {
+		normalized := strings.ToLower(strings.TrimSpace(header))
+		
+		switch normalized {
+		case "timestamp", "time", "date", "datetime":
+			config.TimestampCol = i
+			found["timestamp"] = true
+		case "open":
+			config.OpenCol = i
+			found["open"] = true
+		case "high":
+			config.HighCol = i
+			found["high"] = true
+		case "low":
+			config.LowCol = i
+			found["low"] = true
+		case "close":
+			config.CloseCol = i
+			found["close"] = true
+		case "volume", "vol":
+			config.VolumeCol = i
+			found["volume"] = true
+		}
+	}
+	
+	// Validate all required columns are present
+	required := []string{"timestamp", "open", "high", "low", "close", "volume"}
+	var missing []string
+	for _, col := range required {
+		if !found[col] {
+			missing = append(missing, col)
+		}
+	}
+	
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required columns: %v. Expected format: timestamp,open,high,low,close,volume. Got headers: %v", 
+			missing, headers)
+	}
+	
+	return nil
+}
+
 // NewCSVFeed creates a new CSV data feed from a file.
 func NewCSVFeed(filename string, config CSVConfig) (*CSVFeed, error) {
 	file, err := os.Open(filename)
@@ -73,9 +121,12 @@ func NewCSVFeed(filename string, config CSVConfig) (*CSVFeed, error) {
 		return nil, fmt.Errorf("CSV file is empty")
 	}
 
-	// Skip headers if present
+	// Auto-detect column mapping from headers
 	startIdx := 0
 	if config.HasHeaders {
+		if err := autoDetectColumns(records[0], &config); err != nil {
+			return nil, fmt.Errorf("auto-detect columns: %w", err)
+		}
 		startIdx = 1
 	}
 
@@ -187,6 +238,8 @@ func parseTimestamp(s string) (time.Time, error) {
 	formats := []string{
 		time.RFC3339,
 		time.RFC3339Nano,
+		"2006-01-02 15:04:05.000",      // With milliseconds
+		"2006-01-02 15:04:05.000000",   // With microseconds
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05",
 		"2006-01-02T15:04:05Z",

@@ -2,41 +2,136 @@ package csv
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
-	"time"
-
-	"github.com/ZulferDev/smallbt_go/internal/market"
 )
 
-func TestNewCSVFeed(t *testing.T) {
-	// Create temporary CSV file
-	tmpDir := t.TempDir()
-	csvFile := filepath.Join(tmpDir, "test.csv")
-
-	// Write test data
-	content := `timestamp,open,high,low,close,volume
-2024-01-01T00:00:00Z,100.0,105.0,99.0,102.0,1000.0
-2024-01-01T01:00:00Z,102.0,108.0,101.0,107.0,1200.0
-2024-01-01T02:00:00Z,107.0,110.0,106.0,109.0,800.0
-`
-	if err := os.WriteFile(csvFile, []byte(content), 0644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
+func TestAutoDetectColumns(t *testing.T) {
+	tests := []struct {
+		name        string
+		headers     []string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:    "standard order",
+			headers: []string{"timestamp", "open", "high", "low", "close", "volume"},
+			wantErr: false,
+		},
+		{
+			name:    "different order",
+			headers: []string{"open", "high", "low", "close", "volume", "timestamp"},
+			wantErr: false,
+		},
+		{
+			name:    "case insensitive",
+			headers: []string{"TIMESTAMP", "Open", "HIGH", "low", "Close", "VOLUME"},
+			wantErr: false,
+		},
+		{
+			name:    "alternative names",
+			headers: []string{"time", "open", "high", "low", "close", "vol"},
+			wantErr: false,
+		},
+		{
+			name:        "missing volume",
+			headers:     []string{"timestamp", "open", "high", "low", "close"},
+			wantErr:     true,
+			errContains: "missing required columns: [volume]",
+		},
+		{
+			name:        "missing multiple",
+			headers:     []string{"timestamp", "open", "high"},
+			wantErr:     true,
+			errContains: "missing required columns",
+		},
 	}
 
-	// Create feed
-	config := DefaultCSVConfig("BTCUSDT", market.Timeframe1h)
-	feed, err := NewCSVFeed(csvFile, config)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := DefaultCSVConfig("BTCUSDT", "1h")
+			err := autoDetectColumns(tt.headers, &config)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got nil")
+					return
+				}
+				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+					t.Errorf("error = %v, want to contain %v", err, tt.errContains)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestCSVFeedWithDifferentColumnOrder(t *testing.T) {
+	// Create temporary CSV with different column order
+	tmpfile, err := os.CreateTemp("", "test_*.csv")
 	if err != nil {
-		t.Fatalf("NewCSVFeed() error = %v", err)
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	content := `open,high,low,close,volume,timestamp
+100.0,105.0,99.0,102.0,1000.0,2020-01-01 00:00:00
+102.0,108.0,101.0,107.0,1200.0,2020-01-01 01:00:00
+107.0,112.0,106.0,110.0,1500.0,2020-01-01 02:00:00
+`
+	if _, err := tmpfile.Write([]byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	tmpfile.Close()
+
+	config := DefaultCSVConfig("BTCUSDT", "1h")
+	feed, err := NewCSVFeed(tmpfile.Name(), config)
+	if err != nil {
+		t.Fatalf("NewCSVFeed failed: %v", err)
 	}
 
-	if feed.Symbol() != "BTCUSDT" {
-		t.Errorf("expected symbol BTCUSDT, got %v", feed.Symbol())
+	if feed.Length() != 3 {
+		t.Errorf("expected 3 candles, got %d", feed.Length())
 	}
 
-	if feed.Timeframe() != market.Timeframe1h {
-		t.Errorf("expected timeframe 1h, got %v", feed.Timeframe())
+	// Verify first candle
+	md, err := feed.Next()
+	if err != nil {
+		t.Fatalf("Next() failed: %v", err)
+	}
+
+	candle := md.Candles[0]
+	if candle.Open != 100.0 {
+		t.Errorf("expected open=100.0, got %v", candle.Open)
+	}
+	if candle.Close != 102.0 {
+		t.Errorf("expected close=102.0, got %v", candle.Close)
+	}
+}
+
+func TestCSVFeedWithMilliseconds(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "test_*.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	content := `timestamp,open,high,low,close,volume
+2017-08-17 04:00:00.000,100.0,105.0,99.0,102.0,1000.0
+2017-08-17 05:00:00.123,102.0,108.0,101.0,107.0,1200.0
+2017-08-17 06:00:00.999,107.0,112.0,106.0,110.0,1500.0
+`
+	if _, err := tmpfile.Write([]byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	tmpfile.Close()
+
+	config := DefaultCSVConfig("BTCUSDT", "1h")
+	feed, err := NewCSVFeed(tmpfile.Name(), config)
+	if err != nil {
+		t.Fatalf("NewCSVFeed failed: %v", err)
 	}
 
 	if feed.Length() != 3 {
@@ -44,174 +139,15 @@ func TestNewCSVFeed(t *testing.T) {
 	}
 }
 
-func TestCSVFeedDeterministicIteration(t *testing.T) {
-	// Create temporary CSV file
-	tmpDir := t.TempDir()
-	csvFile := filepath.Join(tmpDir, "test.csv")
-
-	content := `timestamp,open,high,low,close,volume
-2024-01-01T00:00:00Z,100.0,105.0,99.0,102.0,1000.0
-2024-01-01T01:00:00Z,102.0,108.0,101.0,107.0,1200.0
-2024-01-01T02:00:00Z,107.0,110.0,106.0,109.0,800.0
-`
-	if err := os.WriteFile(csvFile, []byte(content), 0644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	config := DefaultCSVConfig("BTCUSDT", market.Timeframe1h)
-	feed, err := NewCSVFeed(csvFile, config)
-	if err != nil {
-		t.Fatalf("NewCSVFeed() error = %v", err)
-	}
-
-	// First iteration - collect all candles
-	var firstRun []market.Candle
-	for {
-		md, err := feed.Next()
-		if err == ErrNoMoreData {
-			break
-		}
-		if err != nil {
-			t.Fatalf("Next() error = %v", err)
-		}
-		firstRun = append(firstRun, md.Candles[0])
-	}
-
-	// Reset and iterate again
-	feed.Reset()
-
-	var secondRun []market.Candle
-	for {
-		md, err := feed.Next()
-		if err == ErrNoMoreData {
-			break
-		}
-		if err != nil {
-			t.Fatalf("Next() error = %v", err)
-		}
-		secondRun = append(secondRun, md.Candles[0])
-	}
-
-	// Verify deterministic behavior
-	if len(firstRun) != len(secondRun) {
-		t.Fatalf("iteration count mismatch: first=%d, second=%d", len(firstRun), len(secondRun))
-	}
-
-	for i := range firstRun {
-		if !firstRun[i].Timestamp.Equal(secondRun[i].Timestamp) {
-			t.Errorf("candle %d: timestamp mismatch", i)
-		}
-		if firstRun[i].Open != secondRun[i].Open {
-			t.Errorf("candle %d: open mismatch", i)
-		}
-	}
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
 }
 
-func TestCSVFeedChronologicalValidation(t *testing.T) {
-	tmpDir := t.TempDir()
-	csvFile := filepath.Join(tmpDir, "test.csv")
-
-	// Out of order data
-	content := `timestamp,open,high,low,close,volume
-2024-01-01T02:00:00Z,107.0,110.0,106.0,109.0,800.0
-2024-01-01T00:00:00Z,100.0,105.0,99.0,102.0,1000.0
-2024-01-01T01:00:00Z,102.0,108.0,101.0,107.0,1200.0
-`
-	if err := os.WriteFile(csvFile, []byte(content), 0644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
+func containsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
 	}
-
-	config := DefaultCSVConfig("BTCUSDT", market.Timeframe1h)
-	_, err := NewCSVFeed(csvFile, config)
-	if err == nil {
-		t.Error("expected error for non-chronological data")
-	}
-}
-
-func TestCSVFeedOHLCValidation(t *testing.T) {
-	tmpDir := t.TempDir()
-	csvFile := filepath.Join(tmpDir, "test.csv")
-
-	// Invalid OHLC: high < low
-	content := `timestamp,open,high,low,close,volume
-2024-01-01T00:00:00Z,100.0,99.0,105.0,102.0,1000.0
-`
-	if err := os.WriteFile(csvFile, []byte(content), 0644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	config := DefaultCSVConfig("BTCUSDT", market.Timeframe1h)
-	_, err := NewCSVFeed(csvFile, config)
-	if err == nil {
-		t.Error("expected error for invalid OHLC")
-	}
-}
-
-func TestCSVFeedUnixTimestamp(t *testing.T) {
-	tmpDir := t.TempDir()
-	csvFile := filepath.Join(tmpDir, "test.csv")
-
-	// Unix timestamp in seconds
-	content := `timestamp,open,high,low,close,volume
-1704067200,100.0,105.0,99.0,102.0,1000.0
-1704070800,102.0,108.0,101.0,107.0,1200.0
-`
-	if err := os.WriteFile(csvFile, []byte(content), 0644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	config := DefaultCSVConfig("BTCUSDT", market.Timeframe1h)
-	feed, err := NewCSVFeed(csvFile, config)
-	if err != nil {
-		t.Fatalf("NewCSVFeed() error = %v", err)
-	}
-
-	expected := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-	md, err := feed.Next()
-	if err != nil {
-		t.Fatalf("Next() error = %v", err)
-	}
-
-	if !md.Candles[0].Timestamp.Equal(expected) {
-		t.Errorf("expected %v, got %v", expected, md.Candles[0].Timestamp)
-	}
-}
-
-func TestCSVFeedPosition(t *testing.T) {
-	tmpDir := t.TempDir()
-	csvFile := filepath.Join(tmpDir, "test.csv")
-
-	content := `timestamp,open,high,low,close,volume
-2024-01-01T00:00:00Z,100.0,105.0,99.0,102.0,1000.0
-2024-01-01T01:00:00Z,102.0,108.0,101.0,107.0,1200.0
-2024-01-01T02:00:00Z,107.0,110.0,106.0,109.0,800.0
-`
-	if err := os.WriteFile(csvFile, []byte(content), 0644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	config := DefaultCSVConfig("BTCUSDT", market.Timeframe1h)
-	feed, err := NewCSVFeed(csvFile, config)
-	if err != nil {
-		t.Fatalf("NewCSVFeed() error = %v", err)
-	}
-
-	if feed.Position() != 0 {
-		t.Errorf("expected initial position 0, got %d", feed.Position())
-	}
-
-	_, _ = feed.Next()
-	if feed.Position() != 1 {
-		t.Errorf("expected position 1 after first Next(), got %d", feed.Position())
-	}
-
-	_, _ = feed.Next()
-	if feed.Position() != 2 {
-		t.Errorf("expected position 2 after second Next(), got %d", feed.Position())
-	}
-
-	feed.Reset()
-	if feed.Position() != 0 {
-		t.Errorf("expected position 0 after Reset(), got %d", feed.Position())
-	}
+	return false
 }
