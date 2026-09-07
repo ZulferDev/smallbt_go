@@ -167,4 +167,3 @@ func (t *PercentileRankTransform) setFieldValue(c *market.Candle, value float64)
 		c.Volume = value
 	}
 }
-

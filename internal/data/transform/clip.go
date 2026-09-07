@@ -16,10 +16,10 @@ import (
 // - Data sanitization
 // - Preventing extreme signals
 type ClipTransform struct {
-	_ TransformConfig
-	Field  string  `yaml:"field"` // Which field to clip (close, volume, etc.)
-	Min    float64 `yaml:"min"`   // Minimum value (lower bound)
-	Max    float64 `yaml:"max"`   // Maximum value (upper bound)
+	_     TransformConfig
+	Field string  `yaml:"field"` // Which field to clip (close, volume, etc.)
+	Min   float64 `yaml:"min"`   // Minimum value (lower bound)
+	Max   float64 `yaml:"max"`   // Maximum value (upper bound)
 }
 
 // Type returns the transform type identifier
