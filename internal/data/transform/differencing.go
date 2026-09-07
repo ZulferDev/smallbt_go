@@ -19,7 +19,7 @@ import (
 // - First difference: price change
 // - Second difference: acceleration
 type DifferencingTransform struct {
-	config TransformConfig
+	_ TransformConfig
 	Field  string `yaml:"field"` // Which field to difference (close, volume, etc.)
 	Order  int    `yaml:"order"` // Order of differencing (1 = first difference, 2 = second, etc.)
 }

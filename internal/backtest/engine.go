@@ -620,7 +620,7 @@ func runBacktestLoop(
 						Quantity:  qty,
 						StopPrice: state.stopLoss,
 					}
-					brokerInstance.SubmitOrder(req, candle.Timestamp)
+					_, _ = brokerInstance.SubmitOrder(req, candle.Timestamp)
 				} else if state.positionSide == portfolio.PositionSideShort && candle.High >= *state.stopLoss {
 					// Stop loss hit for short position
 					req := order.OrderRequest{
@@ -630,7 +630,7 @@ func runBacktestLoop(
 						Quantity:  1.0,
 						StopPrice: state.stopLoss,
 					}
-					brokerInstance.SubmitOrder(req, candle.Timestamp)
+					_, _ = brokerInstance.SubmitOrder(req, candle.Timestamp)
 				}
 			}
 
@@ -644,7 +644,7 @@ func runBacktestLoop(
 						Quantity: 1.0,
 						Price:    state.takeProfit,
 					}
-					brokerInstance.SubmitOrder(req, candle.Timestamp)
+					_, _ = brokerInstance.SubmitOrder(req, candle.Timestamp)
 				} else if state.positionSide == portfolio.PositionSideShort && candle.Low <= *state.takeProfit {
 					// Take profit hit for short position
 					req := order.OrderRequest{

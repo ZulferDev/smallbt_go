@@ -110,7 +110,7 @@ func main() {
 
 	// Save to JSON
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
-	os.WriteFile("/tmp/demo_result.json", resultJSON, 0644)
+	_ = os.WriteFile("/tmp/demo_result.json", resultJSON, 0644)
 
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Println("DEMO: Trade Export & Analysis")
@@ -147,7 +147,7 @@ func main() {
 	fmt.Println(report)
 
 	// Save report
-	os.WriteFile("/tmp/demo_analysis.txt", []byte(report), 0644)
+	_ = os.WriteFile("/tmp/demo_analysis.txt", []byte(report), 0644)
 	fmt.Println("✓ Analysis saved to: /tmp/demo_analysis.txt")
 
 	fmt.Println("\nYou can now test the CLI commands:")

@@ -2,7 +2,6 @@ package transform
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/ZulferDev/smallbt_go/internal/market"
 )
@@ -169,10 +168,3 @@ func (t *PercentileRankTransform) setFieldValue(c *market.Candle, value float64)
 	}
 }
 
-// Helper function to sort float64 slice (not used but available)
-func sortFloat64(values []float64) []float64 {
-	sorted := make([]float64, len(values))
-	copy(sorted, values)
-	sort.Float64s(sorted)
-	return sorted
-}

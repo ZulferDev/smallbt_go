@@ -17,7 +17,7 @@ import (
 // - Signal smoothing while preserving recent moves
 // - Trend detection with faster reaction
 type EMASmooth struct {
-	config TransformConfig
+	_ TransformConfig
 	Field  string `yaml:"field"`  // Which field to smooth (close, volume, etc.)
 	Period int    `yaml:"period"` // EMA period
 }

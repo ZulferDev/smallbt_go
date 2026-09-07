@@ -45,37 +45,6 @@ func mockFailingServer(failAfter int) *httptest.Server {
 	return httptest.NewServer(handler)
 }
 
-// mockDisconnectingServer creates a server that disconnects after N messages.
-func mockDisconnectingServer(disconnectAfter int) *httptest.Server {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-
-		messageCount := 0
-		for {
-			messageType, message, err := conn.ReadMessage()
-			if err != nil {
-				return
-			}
-
-			messageCount++
-			if messageCount >= disconnectAfter {
-				// Force disconnect
-				return
-			}
-
-			err = conn.WriteMessage(messageType, message)
-			if err != nil {
-				return
-			}
-		}
-	})
-
-	return httptest.NewServer(handler)
-}
 
 func TestWebSocketFeed_Reconnect_Success(t *testing.T) {
 	// Server fails first 2 connections, then succeeds
