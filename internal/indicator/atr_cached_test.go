@@ -123,7 +123,7 @@ func TestCachedATR_Reset(t *testing.T) {
 
 	// Update to warm state
 	for _, candle := range candles {
-		cachedATR.Update(candle, prevCandle)
+		_, _ = cachedATR.Update(candle, prevCandle)
 		prevCandle = &candle
 	}
 

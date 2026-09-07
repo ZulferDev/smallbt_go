@@ -86,7 +86,7 @@ func TestRiskManagerExposureLimit(t *testing.T) {
 
 	// Create position with high exposure (45% of equity = $4500)
 	// Quantity 0.45, Price 10000 = exposure $4500
-	p.OpenPosition(market.Symbol("BTCUSDT"), portfolio.PositionSideLong, 0.45, 10000.0, time.Now())
+	_ = p.OpenPosition(market.Symbol("BTCUSDT"), portfolio.PositionSideLong, 0.45, 10000.0, time.Now())
 
 	// Try to add another position (would exceed 50% exposure limit)
 	req := order.OrderRequest{
