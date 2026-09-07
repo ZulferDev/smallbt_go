@@ -592,3 +592,130 @@ entry:
 ---
 
 **Happy Backtesting! 🚀**
+
+---
+
+## Analyzing Your Trades
+
+After running a backtest, you can analyze trade performance in detail.
+
+### Quick Trade Analysis
+
+View trade statistics directly from your backtest result:
+
+```bash
+trader analyze-trades --result backtest_result.json
+```
+
+This shows:
+- Win rate and profit factor
+- Best and worst trades
+- Win/loss streaks
+- Average holding time
+- MAE/MFE analysis
+- Exit reason breakdown
+
+### Export Trades to CSV
+
+For detailed analysis in Excel or other tools:
+
+```bash
+trader export-trades \
+  --result backtest_result.json \
+  --output trades.csv
+```
+
+The CSV includes 19 columns with comprehensive trade details:
+- Entry/exit times and prices
+- Position size and PnL
+- Fees and returns
+- MAE/MFE (Maximum Adverse/Favorable Excursion)
+- Exit reasons
+- Duration in minutes
+
+### Understanding MAE and MFE
+
+**MAE (Maximum Adverse Excursion)**: How far the price moved against you during the trade.
+
+**MFE (Maximum Favorable Excursion)**: How far the price moved in your favor during the trade.
+
+**Why they matter:**
+- If MAE is consistently hitting your stop-loss, your stop might be too tight
+- If MFE is much larger than your exit profit, you might be exiting too early
+- MAE/MFE ratio helps optimize stop-loss and take-profit levels
+
+### Example Analysis Workflow
+
+```bash
+# 1. Run your backtest
+trader backtest \
+  --strategy my_strategy.yaml \
+  --data BTCUSDT.csv \
+  --output result.json
+
+# 2. Quick analysis
+trader analyze-trades --result result.json
+
+# 3. Export for detailed review
+trader export-trades --result result.json --output trades.csv
+
+# 4. Save analysis report
+trader analyze-trades \
+  --result result.json \
+  --output analysis.txt
+```
+
+### Comparing Strategy Versions
+
+Compare performance across strategy iterations:
+
+```bash
+# Run different strategy versions
+trader backtest --strategy v1.yaml --data data.csv --output v1_result.json
+trader backtest --strategy v2.yaml --data data.csv --output v2_result.json
+trader backtest --strategy v3.yaml --data data.csv --output v3_result.json
+
+# Compare trade statistics
+echo "=== Version 1 ==="
+trader analyze-trades --result v1_result.json
+
+echo "=== Version 2 ==="
+trader analyze-trades --result v2_result.json
+
+echo "=== Version 3 ==="
+trader analyze-trades --result v3_result.json
+```
+
+### Key Metrics to Watch
+
+When analyzing trades, pay attention to:
+
+1. **Win Rate**: Percentage of winning trades
+   - Higher isn't always better (small wins + big losses = bad)
+   - Consider alongside profit factor
+
+2. **Profit Factor**: Gross profit ÷ Gross loss
+   - > 1.5 is generally good
+   - > 2.0 is excellent
+   - Combined with sufficient trade count
+
+3. **Average MAE**: How much drawdown per trade
+   - Helps set realistic stop-loss levels
+   - Should be less than average win
+
+4. **Win Streak vs Loss Streak**: Risk management indicator
+   - Long loss streaks = potential account drawdown
+   - Consider position sizing accordingly
+
+5. **Exit Reason Distribution**: Strategy behavior check
+   - Mostly stop-loss = strategy might need work
+   - Mostly take-profit = good, but check if leaving money on table (compare to MFE)
+
+### Trade Journal Best Practices
+
+1. **Always export trades** after important backtests
+2. **Keep a research log** with analysis reports
+3. **Track changes** between strategy versions
+4. **Review worst trades** to identify pattern issues
+5. **Analyze MAE/MFE** to optimize exit levels
+

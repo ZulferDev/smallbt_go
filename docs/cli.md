@@ -768,3 +768,267 @@ trader optimize -s s.yaml -d d.csv -p param:1,100,1 --verbose 2>&1 | \
 ---
 
 **Master the CLI for efficient backtesting! ⚙️**
+
+---
+
+## Trade Analysis Commands
+
+### export-trades
+
+Export trade history from backtest results to CSV format with comprehensive details.
+
+**Usage:**
+
+```bash
+trader export-trades --result <result.json> --output <trades.csv>
+```
+
+**Flags:**
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--result` | string | Yes | Path to backtest result JSON file |
+| `--output` | string | No | Output CSV file path (default: trades.csv) |
+
+**CSV Columns:**
+
+The exported CSV includes 19 columns:
+
+| Column | Description |
+|--------|-------------|
+| ID | Unique trade identifier |
+| Symbol | Trading symbol |
+| Side | Position side (long/short) |
+| EntryTime | Entry timestamp (RFC3339) |
+| EntryPrice | Entry price |
+| ExitTime | Exit timestamp (RFC3339) |
+| ExitPrice | Exit price |
+| Quantity | Position size |
+| Duration_Minutes | Holding time in minutes |
+| GrossPnL | Gross profit/loss |
+| Fees | Total fees paid |
+| NetPnL | Net profit/loss after fees |
+| Return_% | Return percentage |
+| MAE | Maximum Adverse Excursion (absolute) |
+| MFE | Maximum Favorable Excursion (absolute) |
+| MAE_% | MAE as percentage of entry price |
+| MFE_% | MFE as percentage of entry price |
+| ExitReason | Reason for exit (take_profit, stop_loss, etc.) |
+| PriceChange_% | Price change percentage |
+
+**Example:**
+
+```bash
+# Export trades to CSV
+trader export-trades \
+  --result backtest_result.json \
+  --output my_trades.csv
+
+# View in spreadsheet
+libreoffice my_trades.csv
+```
+
+---
+
+### analyze-trades
+
+Analyze trade statistics and generate a comprehensive report.
+
+**Usage:**
+
+```bash
+trader analyze-trades --result <result.json> [--output <report.txt>]
+```
+
+**Flags:**
+
+| Flag | Type | Required | Description |
+|------|------|----------|-------------|
+| `--result` | string | Yes | Path to backtest result JSON file |
+| `--output` | string | No | Optional file to save analysis report |
+
+**Analysis Includes:**
+
+1. **Trade Breakdown**
+   - Total trades
+   - Winning trades (count + percentage)
+   - Losing trades (count + percentage)
+   - Breakeven trades (count + percentage)
+
+2. **Streak Analysis**
+   - Maximum winning streak
+   - Maximum losing streak
+   - Current streak status
+
+3. **Best/Worst Trades**
+   - Largest win (dollar amount)
+   - Largest loss (dollar amount)
+   - Best and worst trade details
+
+4. **Holding Time Statistics**
+   - Average holding time
+   - Minimum holding time
+   - Maximum holding time
+
+5. **MAE/MFE Analysis**
+   - Average Maximum Adverse Excursion (%)
+   - Average Maximum Favorable Excursion (%)
+
+6. **Exit Reason Distribution**
+   - Breakdown by exit reason
+   - Count and percentage for each
+
+**Example Output:**
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TRADE ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Total Trades:      25
+├─ Winning:        15 (60.0%)
+├─ Losing:         9 (36.0%)
+└─ Breakeven:      1 (4.0%)
+
+Streaks:
+├─ Max Win Streak:   4
+└─ Max Loss Streak:  2
+
+Best Trade:        $450.25
+Worst Trade:       $-125.50
+
+Holding Time:
+├─ Average:        12.5h
+├─ Minimum:        2.3h
+└─ Maximum:        2.1d
+
+MAE/MFE Analysis:
+├─ Avg MAE:        -0.45%
+└─ Avg MFE:        1.23%
+
+Exit Reasons:
+├─ take_profit: 12 (48.0%)
+├─ stop_loss: 10 (40.0%)
+├─ manual: 3 (12.0%)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Examples:**
+
+```bash
+# Print analysis to console
+trader analyze-trades --result backtest_result.json
+
+# Save analysis to file
+trader analyze-trades \
+  --result backtest_result.json \
+  --output analysis_report.txt
+
+# Use with multiple results
+for result in results/*.json; do
+  trader analyze-trades --result "$result"
+done
+```
+
+---
+
+## Complete Workflow Example
+
+Here's a complete workflow using trade analysis:
+
+```bash
+# 1. Run backtest
+trader backtest \
+  --strategy my_strategy.yaml \
+  --data historical_data.csv \
+  --output results/backtest_2024.json
+
+# 2. Analyze trade statistics
+trader analyze-trades \
+  --result results/backtest_2024.json \
+  --output results/analysis_2024.txt
+
+# 3. Export trades for detailed review
+trader export-trades \
+  --result results/backtest_2024.json \
+  --output results/trades_2024.csv
+
+# 4. Review in spreadsheet
+libreoffice results/trades_2024.csv
+
+# 5. Compare with previous results
+trader analyze-trades --result results/backtest_2023.json
+trader analyze-trades --result results/backtest_2024.json
+```
+
+---
+
+## Trade Analysis Use Cases
+
+### 1. Performance Attribution
+
+Identify which exit reasons lead to best performance:
+
+```bash
+trader analyze-trades --result result.json | grep "Exit Reasons" -A 5
+```
+
+### 2. Trade Duration Analysis
+
+Understand optimal holding periods:
+
+```bash
+trader export-trades --result result.json --output trades.csv
+# Analyze Duration_Minutes column in spreadsheet
+```
+
+### 3. MAE/MFE Optimization
+
+Optimize stop-loss and take-profit levels:
+
+```bash
+# Export trades
+trader export-trades --result result.json --output trades.csv
+
+# Analyze MAE_% and MFE_% columns to:
+# - See how far price typically moves against you (MAE)
+# - See peak favorable movement before exit (MFE)
+# - Adjust stop-loss if MAE is consistently hit
+# - Adjust take-profit if leaving money on table (MFE much larger)
+```
+
+### 4. Win Streak Analysis
+
+Monitor consecutive wins/losses for risk management:
+
+```bash
+trader analyze-trades --result result.json | grep "Streaks" -A 2
+```
+
+### 5. Research Workflow
+
+Document your trading research:
+
+```bash
+# Create research folder
+mkdir -p research/strategy_v1
+
+# Run backtest
+trader backtest \
+  --strategy strategy_v1.yaml \
+  --data data.csv \
+  --output research/strategy_v1/result.json
+
+# Generate analysis
+trader analyze-trades \
+  --result research/strategy_v1/result.json \
+  --output research/strategy_v1/analysis.txt
+
+# Export detailed trades
+trader export-trades \
+  --result research/strategy_v1/result.json \
+  --output research/strategy_v1/trades.csv
+
+# Now you have complete documentation for this version
+```
+
