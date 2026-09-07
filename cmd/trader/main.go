@@ -453,6 +453,9 @@ func runOptimize(args []string) error {
 	startDate := fs.String("start", "", "Start date (YYYY-MM-DD)")
 	endDate := fs.String("end", "", "End date (YYYY-MM-DD)")
 	outputJSON := fs.String("output", "", "Output JSON file path")
+	outputCSV := fs.String("csv", "", "Output CSV file path for all results")
+	topN := fs.Int("top", 0, "Export only top N results to CSV (0 = all)")
+	sensitivityCSV := fs.String("sensitivity", "", "Output CSV file for parameter sensitivity analysis")
 	parameters := fs.String("parameters", "", "Parameter ranges (format: name:start:end:step,name2:...)")
 	objective := fs.String("objective", "sharpe", "Optimization objective (sharpe, sortino, return, profit_factor)")
 	direction := fs.String("direction", "maximize", "Optimization direction (maximize or minimize)")
@@ -588,6 +591,29 @@ func runOptimize(args []string) error {
 			return fmt.Errorf("save JSON: %w", err)
 		}
 		fmt.Printf("Results saved to %s\n", *outputJSON)
+	}
+
+	// Export to CSV
+	if *outputCSV != "" {
+		if *topN > 0 {
+			if err := report.ExportTopNToCSV(*outputCSV, *topN); err != nil {
+				return fmt.Errorf("export top %d to CSV: %w", *topN, err)
+			}
+			fmt.Printf("Top %d results exported to %s\n", *topN, *outputCSV)
+		} else {
+			if err := report.ExportToCSV(*outputCSV); err != nil {
+				return fmt.Errorf("export to CSV: %w", err)
+			}
+			fmt.Printf("All results exported to %s\n", *outputCSV)
+		}
+	}
+
+	// Export sensitivity analysis
+	if *sensitivityCSV != "" {
+		if err := report.ExportSensitivityAnalysisToCSV(*sensitivityCSV); err != nil {
+			return fmt.Errorf("export sensitivity analysis: %w", err)
+		}
+		fmt.Printf("Sensitivity analysis exported to %s\n", *sensitivityCSV)
 	}
 
 	return nil
