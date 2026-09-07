@@ -302,7 +302,7 @@ func BenchmarkEndToEnd_MultiSymbol_Cached_Conditional(b *testing.B) {
 
 		// Read all symbols
 		for j := 0; j < 3; j++ {
-			msf.ReadAll(fmt.Sprintf("SYM%d", j))
+			_, _ = msf.ReadAll(fmt.Sprintf("SYM%d", j))
 		}
 
 		b.StopTimer()

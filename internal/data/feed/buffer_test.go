@@ -154,7 +154,7 @@ func TestCandleBuffer_Drain(t *testing.T) {
 			Close:     float64(102 + i),
 			Volume:    1000.0,
 		}
-		buffer.Push(candle)
+		_ = buffer.Push(candle)
 	}
 
 	// Drain
@@ -199,7 +199,7 @@ func TestCandleBuffer_Clear(t *testing.T) {
 			Close:     102.0,
 			Volume:    1000.0,
 		}
-		buffer.Push(candle)
+		_ = buffer.Push(candle)
 	}
 
 	buffer.Clear()
@@ -226,7 +226,7 @@ func TestCandleBuffer_Concurrent(t *testing.T) {
 					Close:     102.0,
 					Volume:    1000.0,
 				}
-				buffer.Push(candle)
+				_ = buffer.Push(candle)
 			}
 			done <- true
 		}()

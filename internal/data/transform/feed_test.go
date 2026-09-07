@@ -22,13 +22,13 @@ func createTestCSV(tb testing.TB, count int) string {
 	}
 	defer file.Close()
 
-	file.WriteString("timestamp,open,high,low,close,volume\n")
+	_, _ = file.WriteString("timestamp,open,high,low,close,volume\n")
 
 	baseTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	for i := 0; i < count; i++ {
 		ts := baseTime.Add(time.Duration(i) * time.Hour)
 		price := 100.0 + float64(i)
-		file.WriteString(fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.2f\n",
+		_, _ = file.WriteString(fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.2f\n",
 			ts.Format(time.RFC3339),
 			price, price+2, price-1, price+1, 1000.0+float64(i*10)))
 	}

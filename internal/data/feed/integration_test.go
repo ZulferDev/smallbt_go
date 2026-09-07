@@ -192,7 +192,7 @@ func TestWebSocketFeed_BufferDrain(t *testing.T) {
 			Close:     float64(102 + i),
 			Volume:    1000.0,
 		}
-		feed.buffer.Push(candle)
+		_ = feed.buffer.Push(candle)
 	}
 
 	// Buffer should trigger overflow at 3
@@ -264,7 +264,7 @@ func TestWebSocketFeed_BufferPersistence(t *testing.T) {
 			Close:     float64(102 + i),
 			Volume:    1000.0,
 		}
-		feed.buffer.Push(candle)
+		_ = feed.buffer.Push(candle)
 	}
 
 	if feed.buffer.Len() != 10 {

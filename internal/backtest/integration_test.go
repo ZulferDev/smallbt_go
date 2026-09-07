@@ -190,7 +190,7 @@ func createTestCSVFile(t *testing.T) string {
 	defer file.Close()
 
 	// Write CSV header
-	file.WriteString("timestamp,open,high,low,close,volume\n")
+	_, _ = file.WriteString("timestamp,open,high,low,close,volume\n")
 
 	// Write 100 candles
 	baseTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -201,7 +201,7 @@ func createTestCSVFile(t *testing.T) string {
 		low := price - 100
 		volume := 1000000.0 + float64(i*10000)
 
-		file.WriteString(
+		_, _ = file.WriteString(
 			ts.Format("2006-01-02 15:04:05") + "," +
 				formatFloat(price) + "," +
 				formatFloat(high) + "," +
