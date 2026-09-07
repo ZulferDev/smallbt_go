@@ -45,7 +45,6 @@ func mockFailingServer(failAfter int) *httptest.Server {
 	return httptest.NewServer(handler)
 }
 
-
 func TestWebSocketFeed_Reconnect_Success(t *testing.T) {
 	// Server fails first 2 connections, then succeeds
 	server := mockFailingServer(2)
