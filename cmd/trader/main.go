@@ -684,6 +684,9 @@ func runWalkforward(args []string) error {
 	testBars := fs.Int("test", 200, "Number of bars for testing (out-of-sample) period")
 	stepBars := fs.Int("step", 0, "Number of bars to step forward (0 = step = test)")
 	outputJSON := fs.String("output", "", "Output JSON file path")
+	csvWindows := fs.String("csv-windows", "", "Export window results to CSV")
+	csvAggregate := fs.String("csv-aggregate", "", "Export aggregate metrics to CSV")
+	csvStability := fs.String("csv-stability", "", "Export stability analysis to CSV")
 
 	// Parse flags
 	if err := fs.Parse(args); err != nil {
@@ -802,6 +805,40 @@ func runWalkforward(args []string) error {
 		}
 
 		fmt.Printf("Configuration saved to: %s\n", *outputJSON)
+	}
+
+	// Export CSV reports if requested
+	if *csvWindows != "" {
+		if len(wfa.Results) > 0 {
+			if err := wfa.ExportWindowResultsToCSV(*csvWindows); err != nil {
+				return fmt.Errorf("export window results: %w", err)
+			}
+			fmt.Printf("Window results exported to: %s\n", *csvWindows)
+		} else {
+			fmt.Println("⚠️  No window results available for export")
+		}
+	}
+
+	if *csvAggregate != "" {
+		if wfa.AggregateResult != nil {
+			if err := wfa.ExportAggregateResultToCSV(*csvAggregate); err != nil {
+				return fmt.Errorf("export aggregate results: %w", err)
+			}
+			fmt.Printf("Aggregate results exported to: %s\n", *csvAggregate)
+		} else {
+			fmt.Println("⚠️  No aggregate results available for export")
+		}
+	}
+
+	if *csvStability != "" {
+		if len(wfa.Results) > 0 {
+			if err := wfa.ExportStabilityAnalysisToCSV(*csvStability); err != nil {
+				return fmt.Errorf("export stability analysis: %w", err)
+			}
+			fmt.Printf("Stability analysis exported to: %s\n", *csvStability)
+		} else {
+			fmt.Println("⚠️  No results available for stability analysis")
+		}
 	}
 
 	return nil

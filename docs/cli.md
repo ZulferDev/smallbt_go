@@ -373,10 +373,14 @@ trader walkforward [options]
 | `--param` / `-p` | Parameters to optimize | none | `--param sma_fast.period:5,30,5` |
 | `--objective` | Optimization objective | sharpe | `--objective return` |
 | `--cash` | Initial cash | 10000 | `--cash 50000` |
-| `--output` / `-o` | Output file | stdout | `--output wf_results.json` |
+| `--output` / `-o` | Output JSON file | none | `--output wf_results.json` |
+| `--csv-windows` | Export window results to CSV | none | `--csv-windows windows.csv` |
+| `--csv-aggregate` | Export aggregate metrics to CSV | none | `--csv-aggregate aggregate.csv` |
+| `--csv-stability` | Export stability analysis to CSV | none | `--csv-stability stability.csv` |
 
-**Example:**
+**Examples:**
 
+**Basic Walk Forward Analysis:**
 ```bash
 trader walkforward \
   --strategy strategies/sma_cross.yaml \
@@ -387,6 +391,54 @@ trader walkforward \
   --param indicators.sma_fast.period:5,30,5 \
   --param indicators.sma_slow.period:20,100,10
 ```
+
+**Export Detailed CSV Reports:**
+```bash
+trader walkforward \
+  --strategy strategies/ema_volume.yaml \
+  --data data/ETHUSDT_4h.csv \
+  --train 1000 \
+  --test 200 \
+  --step 200 \
+  --csv-windows wf_windows.csv \
+  --csv-aggregate wf_aggregate.csv \
+  --csv-stability wf_stability.csv
+```
+
+**CSV Output Formats:**
+
+**Window Results (`--csv-windows`):**
+Contains performance for each walk forward window:
+- WindowID, TrainStart, TrainEnd, TestStart, TestEnd
+- TrainReturn_%, TrainSharpe, TrainTrades
+- TestReturn_%, TestSharpe, TestMaxDrawdown_%, TestWinRate_%, TestProfitFactor, TestTrades
+- InSampleOutSampleDelta_%, PerformanceDegradation
+
+**Aggregate Results (`--csv-aggregate`):**
+Contains overall out-of-sample performance:
+- TotalWindows, TotalTrades, TotalReturn_%, CAGR_%
+- SharpeRatio, SortinoRatio, MaxDrawdown_%, CalmarRatio
+- WinRate_%, ProfitFactor, Expectancy
+- AverageWin, AverageLoss, AvgTradeReturn_%
+
+**Stability Analysis (`--csv-stability`):**
+Contains consistency metrics across windows:
+- TotalWindows, ProfitableWindows, UnprofitableWindows, ProfitableRate_%
+- ConsistencyScore (0-100), AvgReturnStdDev, AvgSharpeStdDev
+- BestWindow, BestWindowReturn_%, WorstWindow, WorstWindowReturn_%
+- ImprovedWindows, DegradationLow, DegradationModerate, DegradationHigh
+
+**Performance Degradation Classification:**
+- **Improved**: Test performance better than training
+- **Low**: 0-5% degradation from training to test
+- **Moderate**: 5-10% degradation
+- **High**: >10% degradation
+
+**Consistency Score Interpretation:**
+- **80-100**: Excellent - highly stable across windows
+- **60-80**: Good - acceptable consistency
+- **40-60**: Fair - moderate instability
+- **0-40**: Poor - highly unstable, likely overfit
 
 **Output:**
 
