@@ -1,0 +1,23 @@
+# Gosec configuration for trading backtest engine
+# Some security checks are not applicable to offline backtest simulation
+
+excludes:
+  # G404: Use of weak random number generator (math/rand)
+  # Justification: Used for Monte Carlo simulation and synthetic data generation,
+  # not for cryptographic purposes. Crypto-grade randomness not required.
+  - G404
+  
+  # G304: Potential file inclusion via variable
+  # Justification: CLI tool that reads user-specified strategy files and data files.
+  # File paths are provided by the user running the tool locally.
+  - G304
+  
+  # G306: Expect WriteFile permissions to be 0600 or less
+  # Justification: Backtest reports are meant to be shared and readable.
+  # Not writing sensitive credentials or keys.
+  - G306
+
+  # G703: Path traversal via taint analysis
+  # Justification: CLI tool processes user-provided file paths.
+  # Users control their own filesystem access.
+  - G703
