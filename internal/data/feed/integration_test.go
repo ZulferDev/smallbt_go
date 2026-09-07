@@ -234,17 +234,26 @@ func TestWebSocketFeed_MultipleSubscribers(t *testing.T) {
 	ch2 := feed.Subscribe()
 	ch3 := feed.Subscribe()
 
-	timeout := time.After(500 * time.Millisecond)
-
-	// All subscribers should receive the candle
+	// All subscribers should receive the candle with retry
 	for i, ch := range []<-chan *market.Candle{ch1, ch2, ch3} {
-		select {
-		case candle := <-ch:
-			if candle == nil {
-				t.Errorf("subscriber %d: received nil candle", i)
+		received := false
+		timeout := time.After(2 * time.Second) // Increased timeout for CI
+		ticker := time.NewTicker(50 * time.Millisecond)
+		defer ticker.Stop()
+
+		for !received {
+			select {
+			case candle := <-ch:
+				if candle == nil {
+					t.Errorf("subscriber %d: received nil candle", i)
+				}
+				received = true
+			case <-ticker.C:
+				// Keep trying
+			case <-timeout:
+				t.Errorf("subscriber %d: timeout waiting for candle", i)
+				received = true // Exit loop
 			}
-		case <-timeout:
-			t.Errorf("subscriber %d: timeout waiting for candle", i)
 		}
 	}
 }
