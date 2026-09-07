@@ -850,6 +850,11 @@ func runMonteCarlo(args []string) error {
 	simulations := fs.Int("simulations", 1000, "Number of Monte Carlo simulations")
 	seed := fs.Int64("seed", 42, "Random seed for reproducibility")
 	outputJSON := fs.String("output", "", "Output JSON file path")
+	csvStats := fs.String("csv-stats", "", "Export statistics to CSV")
+	csvPercentiles := fs.String("csv-percentiles", "", "Export percentiles to CSV")
+	csvSimulations := fs.String("csv-simulations", "", "Export all simulations to CSV")
+	csvDrawdown := fs.String("csv-drawdown", "", "Export drawdown distribution to CSV")
+	csvRisk := fs.String("csv-risk", "", "Export risk analysis to CSV")
 
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
@@ -984,6 +989,42 @@ func runMonteCarlo(args []string) error {
 		}
 
 		fmt.Printf("\nResults saved to: %s\n", *outputJSON)
+	}
+
+	// Export CSV reports if requested
+	if *csvStats != "" {
+		if err := mcResult.ExportStatisticsToCSV(*csvStats); err != nil {
+			return fmt.Errorf("export statistics: %w", err)
+		}
+		fmt.Printf("Statistics exported to: %s\n", *csvStats)
+	}
+
+	if *csvPercentiles != "" {
+		if err := mcResult.ExportPercentilesToCSV(*csvPercentiles); err != nil {
+			return fmt.Errorf("export percentiles: %w", err)
+		}
+		fmt.Printf("Percentiles exported to: %s\n", *csvPercentiles)
+	}
+
+	if *csvSimulations != "" {
+		if err := mcResult.ExportSimulationsToCSV(*csvSimulations); err != nil {
+			return fmt.Errorf("export simulations: %w", err)
+		}
+		fmt.Printf("Simulations exported to: %s\n", *csvSimulations)
+	}
+
+	if *csvDrawdown != "" {
+		if err := mcResult.ExportDrawdownDistributionToCSV(*csvDrawdown); err != nil {
+			return fmt.Errorf("export drawdown distribution: %w", err)
+		}
+		fmt.Printf("Drawdown distribution exported to: %s\n", *csvDrawdown)
+	}
+
+	if *csvRisk != "" {
+		if err := mcResult.ExportRiskAnalysisToCSV(*csvRisk); err != nil {
+			return fmt.Errorf("export risk analysis: %w", err)
+		}
+		fmt.Printf("Risk analysis exported to: %s\n", *csvRisk)
 	}
 
 	return nil

@@ -490,26 +490,94 @@ trader montecarlo [options]
 
 | Option | Description | Default | Example |
 |--------|-------------|---------|---------|
-| `--simulations` / `-n` | Number of simulations | 10000 | `--simulations 50000` |
-| `--confidence` | Confidence level (%) | 95 | `--confidence 99` |
-| `--output` / `-o` | Output file | stdout | `--output mc_results.json` |
+| `--simulations` / `-n` | Number of simulations | 1000 | `--simulations 10000` |
+| `--seed` | Random seed for reproducibility | 42 | `--seed 123` |
+| `--output` / `-o` | Output JSON file | none | `--output mc_results.json` |
+| `--csv-stats` | Export statistics to CSV | none | `--csv-stats mc_stats.csv` |
+| `--csv-percentiles` | Export percentiles to CSV | none | `--csv-percentiles percentiles.csv` |
+| `--csv-simulations` | Export all simulations to CSV | none | `--csv-simulations sims.csv` |
+| `--csv-drawdown` | Export drawdown distribution to CSV | none | `--csv-drawdown dd_dist.csv` |
+| `--csv-risk` | Export risk analysis to CSV | none | `--csv-risk risk.csv` |
 
-**Example:**
+**Examples:**
 
+**Basic Monte Carlo Analysis:**
 ```bash
 # First run backtest
 trader backtest \
   --strategy strategies/sma_cross.yaml \
   --data data/BTCUSDT_1h.csv \
-  --output results/backtest.json \
-  --format json
+  --output results/backtest.json
 
 # Then run Monte Carlo
 trader montecarlo \
   --result results/backtest.json \
   --simulations 10000 \
-  --confidence 95
+  --seed 42
 ```
+
+**Export Detailed CSV Reports:**
+```bash
+trader montecarlo \
+  --result results/backtest.json \
+  --simulations 10000 \
+  --csv-stats mc_statistics.csv \
+  --csv-percentiles mc_percentiles.csv \
+  --csv-simulations mc_all_sims.csv \
+  --csv-drawdown mc_drawdown.csv \
+  --csv-risk mc_risk.csv
+```
+
+**CSV Output Formats:**
+
+**Statistics (`--csv-stats`):**
+Contains aggregated Monte Carlo statistics:
+- Return distribution: Mean, Median, StdDev, Min, Max, P05, P95
+- Drawdown distribution: Mean, Median, StdDev, P95
+- Win rate distribution: Mean, StdDev, Min, Max
+- Sharpe ratio distribution: Mean, StdDev, Min, Max
+- Risk metrics: ProbabilityOfRuin, NegativeReturnRatio
+
+**Percentiles (`--csv-percentiles`):**
+Contains key percentiles (5th, 25th, 50th, 75th, 95th):
+- Percentile, TotalReturn_%, MaxDrawdown_%, WinRate_%, SharpeRatio
+
+**Simulations (`--csv-simulations`):**
+Contains all individual simulation results:
+- SimulationID, TotalReturn_%, MaxDrawdown_%, TotalTrades
+- WinningTrades, LosingTrades, WinRate_%, TotalPnL, SharpeRatio
+
+**Drawdown Distribution (`--csv-drawdown`):**
+Contains percentile-based drawdown analysis with interpretations:
+- Percentile, MaxDrawdown_%, Interpretation
+- Best case (5%), Median (50%), Worst case (95%)
+
+**Risk Analysis (`--csv-risk`):**
+Contains comprehensive risk assessment:
+- ExpectedReturn_%, WorstCase5Pct_%, BestCase95Pct_%
+- ProbabilityProfit_%, ProbabilityLoss_%
+- WorstDrawdown95Pct_%, RiskOfRuin_%
+- ConsistencyScore with interpretation
+
+**Risk Metrics Interpretation:**
+
+**Probability of Profit:**
+- >80%: Very high confidence
+- 60-80%: High confidence
+- 50-60%: Slight edge
+- <50%: Low confidence - high risk
+
+**Risk of Ruin:**
+- <1%: Very low risk
+- 1-5%: Low risk
+- 5-10%: Moderate risk
+- >10%: High risk - unacceptable
+
+**Consistency Score (0-100):**
+- 80-100: Excellent - very consistent returns
+- 60-80: Good - acceptable consistency
+- 40-60: Fair - moderate variance
+- 0-40: Poor - high variance, unstable
 
 **Output:**
 
