@@ -119,7 +119,7 @@ func (q *OrderQueue) Get(orderID string) (*QueuedOrder, bool) {
 	if !exists {
 		return nil, false
 	}
-	
+
 	// Return a copy to prevent concurrent access issues
 	copy := *qo
 	return &copy, true
