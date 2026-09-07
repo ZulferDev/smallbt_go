@@ -75,13 +75,13 @@ func BenchmarkParallelMultiSymbolFeed(b *testing.B) {
 					for j := 0; j < symbols; j++ {
 						feed, _ := csv.NewCSVDataFeed(csvPath, config)
 						chain := NewTransformChain(NewScaleTransform(2.0, "close"))
-						pmsf.AddSymbol(fmt.Sprintf("SYM%d", j), feed, chain, 100)
+						_ = pmsf.AddSymbol(fmt.Sprintf("SYM%d", j), feed, chain, 100)
 					}
 
 					ctx := context.Background()
 					b.StartTimer()
 
-					pmsf.ReadAllParallel(ctx)
+					_, _ = pmsf.ReadAllParallel(ctx)
 
 					b.StopTimer()
 					pmsf.Close()
@@ -110,9 +110,9 @@ func BenchmarkCachedTransformedFeed_ReadAll(b *testing.B) {
 				b.StartTimer()
 
 				// First read (miss)
-				ctf.ReadAll()
+				_, _ = ctf.ReadAll()
 				// Second read (hit)
-				ctf.ReadAll()
+				_, _ = ctf.ReadAll()
 
 				b.StopTimer()
 				ctf.Close()
@@ -135,7 +135,7 @@ func BenchmarkSmartCache_GetOrCompute(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				key := fmt.Sprintf("key_%d", i%10) // Reuse 10 keys
-				sc.GetOrCompute(key, compute)
+				_, _ = sc.GetOrCompute(key, compute)
 			}
 		})
 	}
@@ -189,7 +189,7 @@ func BenchmarkConditionalTransform_Apply(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				ct.Apply(candles)
+				_, _ = ct.Apply(candles)
 			}
 		})
 	}
@@ -209,7 +209,7 @@ func BenchmarkSwitchTransform_Apply(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				st.Apply(candles)
+				_, _ = st.Apply(candles)
 			}
 		})
 	}
@@ -230,7 +230,7 @@ func BenchmarkFilterTransform_Apply(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				ft.Apply(candles)
+				_, _ = ft.Apply(candles)
 			}
 		})
 	}
