@@ -22,7 +22,7 @@ type LegacyBroker struct {
 func NewBroker(executor *execution.SimpleExecutor) *LegacyBroker {
 	orderMgr := order.NewOrderManager()
 	portfolio := portfolio.NewPortfolio(0) // Portfolio managed externally by engine
-	simBroker := NewSimulatedBroker(executor, portfolio)
+	simBroker := NewSimulatedBroker(executor, portfolio, orderMgr)
 
 	return &LegacyBroker{
 		broker:   simBroker,

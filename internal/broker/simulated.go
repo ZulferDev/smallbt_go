@@ -23,9 +23,9 @@ type SimulatedBroker struct {
 }
 
 // NewSimulatedBroker creates a new simulated broker for backtesting
-func NewSimulatedBroker(executor *execution.SimpleExecutor, portfolio *portfolio.Portfolio) *SimulatedBroker {
+func NewSimulatedBroker(executor *execution.SimpleExecutor, portfolio *portfolio.Portfolio, orderManager *order.OrderManager) *SimulatedBroker {
 	return &SimulatedBroker{
-		orderManager:  order.NewOrderManager(),
+		orderManager:  orderManager,
 		executor:      executor,
 		pendingOrders: make(map[string]*order.Order),
 		portfolio:     portfolio,
