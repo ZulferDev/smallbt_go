@@ -36,7 +36,7 @@ func TestRegistry_Create(t *testing.T) {
 	factory := func(config Config) (Indicator, error) {
 		return &SMA{name: "test", period: config.Period, source: config.Source}, nil
 	}
-	reg.Register("test", factory)
+	_ = reg.Register("test", factory)
 
 	// Test successful creation
 	config := Config{Type: "test", Period: 10, Source: "close"}
