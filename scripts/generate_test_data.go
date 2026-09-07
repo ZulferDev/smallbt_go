@@ -39,7 +39,7 @@ func main() {
 	basePrice := 42000.0
 	price := basePrice
 
-	rand.Seed(42) // Deterministic
+	rng := rand.New(rand.NewSource(42)) // Deterministic
 
 	for i := 0; i < numCandles; i++ {
 		timestamp := startTime.Add(time.Duration(i) * time.Hour)
@@ -57,15 +57,15 @@ func main() {
 		}
 
 		// Random walk with trend
-		change := trend + (rand.Float64()-0.5)*50
+		change := trend + (rng.Float64()-0.5)*50
 		price += change
 
 		// Generate OHLC
 		open := price
-		volatility := 100.0 + rand.Float64()*100
-		high := open + rand.Float64()*volatility
-		low := open - rand.Float64()*volatility
-		close := low + rand.Float64()*(high-low)
+		volatility := 100.0 + rng.Float64()*100
+		high := open + rng.Float64()*volatility
+		low := open - rng.Float64()*volatility
+		close := low + rng.Float64()*(high-low)
 
 		// Ensure OHLC validity
 		if high < open {
@@ -82,7 +82,7 @@ func main() {
 		}
 
 		// Volume with spikes during trend changes
-		baseVolume := 1000.0 + rand.Float64()*500
+		baseVolume := 1000.0 + rng.Float64()*500
 		volumeMultiplier := 1.0
 
 		// Volume spike at trend changes

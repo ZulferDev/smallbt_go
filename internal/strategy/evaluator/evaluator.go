@@ -426,8 +426,6 @@ func (e *Evaluator) updateCandleStateless(candle market.Candle) error {
 		e.validityFlags[name] = value.Valid
 		if value.Valid {
 			e.values[name] = value.Value
-			if barIndex < 25 && (name == "volume_avg" || name == "ema_fast" || name == "ema_slow") {
-			}
 		} else {
 			e.values[name] = 0
 		}
@@ -442,8 +440,6 @@ func (e *Evaluator) updateCandleStateless(candle market.Candle) error {
 		}
 	}
 
-	if barIndex == 0 {
-	}
 
 	// Topologically sort composite indicators based on dependencies
 	sortedCompositeNames, err := e.topologicalSortCompositeIndicators(compositeNames)
@@ -451,8 +447,6 @@ func (e *Evaluator) updateCandleStateless(candle market.Candle) error {
 		return fmt.Errorf("sort composite indicators: %w", err)
 	}
 
-	if barIndex == 0 {
-	}
 
 	for _, name := range sortedCompositeNames {
 		ind := e.indicators[name]
