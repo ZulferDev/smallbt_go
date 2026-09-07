@@ -2,7 +2,6 @@ package walkforward
 
 import (
 	"math"
-
 )
 
 // ComputeAggregate computes aggregate metrics across all windows.
