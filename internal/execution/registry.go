@@ -14,7 +14,7 @@ type SlippageModelFactory func(params map[string]interface{}) (SlippageModel, er
 
 // Registry manages custom slippage model registration.
 type Registry struct {
-	mu       sync.RWMutex
+	mu        sync.RWMutex
 	factories map[string]SlippageModelFactory
 }
 
@@ -67,12 +67,12 @@ func (r *Registry) registerBuiltins() {
 		if !ok {
 			return nil, fmt.Errorf("volume slippage model requires 'impact_factor' parameter (float64)")
 		}
-		
+
 		maxSlippage := 0.0
 		if max, ok := params["max_slippage"].(float64); ok {
 			maxSlippage = max
 		}
-		
+
 		return NewVolumeSlippageModel(factor, maxSlippage), nil
 	}
 
@@ -170,7 +170,7 @@ func (r *Registry) Create(name string, params map[string]interface{}) (SlippageM
 func (r *Registry) Clear() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	// Save built-ins
 	builtins := map[string]SlippageModelFactory{
 		"fixed":      r.factories["fixed"],
@@ -244,10 +244,10 @@ func (m *SpreadSlippageModel) CalculateSlippage(req order.OrderRequest, fillPric
 
 	// Estimate spread from candle range
 	spread := (candle.High - candle.Low) * m.SpreadMultiplier
-	
+
 	// Apply half spread as slippage
 	slippage := spread / 2.0
-	
+
 	if req.Side == order.OrderSideBuy {
 		return slippage, nil
 	}

@@ -176,21 +176,21 @@ func (r *BufferedParquetReader) loadAll() error {
 // Stats returns statistics about the buffered reader.
 func (r *BufferedParquetReader) Stats() BufferedReaderStats {
 	return BufferedReaderStats{
-		TotalCandles:  len(r.allData),
-		CurrentIndex:  r.dataIndex,
-		ChunkSize:     r.config.ChunkSize,
-		ChunksRead:    r.dataIndex / r.config.ChunkSize,
-		MemoryUsedMB:  float64(len(r.allData)*sizeOfCandle) / 1024 / 1024,
+		TotalCandles: len(r.allData),
+		CurrentIndex: r.dataIndex,
+		ChunkSize:    r.config.ChunkSize,
+		ChunksRead:   r.dataIndex / r.config.ChunkSize,
+		MemoryUsedMB: float64(len(r.allData)*sizeOfCandle) / 1024 / 1024,
 	}
 }
 
 // BufferedReaderStats contains statistics about buffered reader.
 type BufferedReaderStats struct {
-	TotalCandles  int
-	CurrentIndex  int
-	ChunkSize     int
-	ChunksRead    int
-	MemoryUsedMB  float64
+	TotalCandles int
+	CurrentIndex int
+	ChunkSize    int
+	ChunksRead   int
+	MemoryUsedMB float64
 }
 
 // Approximate size of one candle in bytes

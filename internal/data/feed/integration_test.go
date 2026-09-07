@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/gorilla/websocket"
 )
 
 // mockCandleServer creates a WebSocket server that sends candle data.

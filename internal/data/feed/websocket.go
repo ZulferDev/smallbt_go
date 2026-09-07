@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/ZulferDev/smallbt_go/internal/market"
+	"github.com/gorilla/websocket"
 )
 
 // ConnectionState represents the WebSocket connection state.
@@ -42,44 +42,44 @@ func (s ConnectionState) String() string {
 
 // WebSocketFeed provides real-time market data via WebSocket.
 type WebSocketFeed struct {
-	url           string
-	symbols       []string
-	timeframe     time.Duration
-	
-	conn          *websocket.Conn
-	state         ConnectionState
-	stateMu       sync.RWMutex
-	
+	url       string
+	symbols   []string
+	timeframe time.Duration
+
+	conn    *websocket.Conn
+	state   ConnectionState
+	stateMu sync.RWMutex
+
 	reconnectDelay   time.Duration
 	maxReconnects    int
 	reconnectAttempt int
-	
-	buffer        *CandleBuffer
-	subscribers   []chan *market.Candle
-	subMu         sync.RWMutex
-	
-	ctx           context.Context
-	cancel        context.CancelFunc
-	wg            sync.WaitGroup
-	
-	lastPing      time.Time
-	lastPingMu    sync.RWMutex
-	pingInterval  time.Duration
-	pongTimeout   time.Duration
-	
-	errChan       chan error
+
+	buffer      *CandleBuffer
+	subscribers []chan *market.Candle
+	subMu       sync.RWMutex
+
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+
+	lastPing     time.Time
+	lastPingMu   sync.RWMutex
+	pingInterval time.Duration
+	pongTimeout  time.Duration
+
+	errChan chan error
 }
 
 // WebSocketConfig holds WebSocket feed configuration.
 type WebSocketConfig struct {
-	URL              string
-	Symbols          []string
-	Timeframe        time.Duration
-	ReconnectDelay   time.Duration
-	MaxReconnects    int
-	PingInterval     time.Duration
-	PongTimeout      time.Duration
-	BufferSize       int
+	URL            string
+	Symbols        []string
+	Timeframe      time.Duration
+	ReconnectDelay time.Duration
+	MaxReconnects  int
+	PingInterval   time.Duration
+	PongTimeout    time.Duration
+	BufferSize     int
 }
 
 // DefaultWebSocketConfig returns default WebSocket configuration.
@@ -96,7 +96,7 @@ func DefaultWebSocketConfig() WebSocketConfig {
 // NewWebSocketFeed creates a new WebSocket feed.
 func NewWebSocketFeed(config WebSocketConfig) *WebSocketFeed {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &WebSocketFeed{
 		url:              config.URL,
 		symbols:          config.Symbols,
@@ -129,23 +129,23 @@ func (f *WebSocketFeed) Connect() error {
 	}
 	f.state = StateConnecting
 	f.stateMu.Unlock()
-	
+
 	conn, _, err := websocket.DefaultDialer.Dial(f.url, nil)
 	if err != nil {
 		f.setState(StateDisconnected)
 		return fmt.Errorf("dial failed: %w", err)
 	}
-	
+
 	f.conn = conn
 	f.setState(StateConnected)
 	f.reconnectAttempt = 0
-	
+
 	// Start background goroutines
 	f.wg.Add(3)
 	go f.readLoop()
 	go f.heartbeatLoop()
 	go f.errorHandler()
-	
+
 	return nil
 }
 
@@ -153,7 +153,7 @@ func (f *WebSocketFeed) Connect() error {
 func (f *WebSocketFeed) Subscribe() <-chan *market.Candle {
 	f.subMu.Lock()
 	defer f.subMu.Unlock()
-	
+
 	ch := make(chan *market.Candle, 100)
 	f.subscribers = append(f.subscribers, ch)
 	return ch
@@ -168,18 +168,18 @@ func (f *WebSocketFeed) Close() error {
 	}
 	f.state = StateClosed
 	f.stateMu.Unlock()
-	
+
 	// Cancel context to stop all goroutines
 	f.cancel()
-	
+
 	// Close WebSocket connection
 	if f.conn != nil {
 		f.conn.Close()
 	}
-	
+
 	// Wait for all goroutines to finish
 	f.wg.Wait()
-	
+
 	// Close all subscriber channels
 	f.subMu.Lock()
 	for _, ch := range f.subscribers {
@@ -187,9 +187,9 @@ func (f *WebSocketFeed) Close() error {
 	}
 	f.subscribers = nil
 	f.subMu.Unlock()
-	
+
 	close(f.errChan)
-	
+
 	return nil
 }
 
@@ -210,19 +210,19 @@ func (f *WebSocketFeed) setState(state ConnectionState) {
 // readLoop reads messages from the WebSocket connection.
 func (f *WebSocketFeed) readLoop() {
 	defer f.wg.Done()
-	
+
 	for {
 		select {
 		case <-f.ctx.Done():
 			return
 		default:
 		}
-		
+
 		if f.conn == nil {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-		
+
 		_, message, err := f.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -230,14 +230,14 @@ func (f *WebSocketFeed) readLoop() {
 			}
 			return
 		}
-		
+
 		// Parse message into Candle
 		candle, err := f.parseMessage(message)
 		if err != nil {
 			// Log parse error but don't disconnect
 			continue
 		}
-		
+
 		if candle != nil {
 			// Buffer the candle
 			err = f.buffer.Push(candle)
@@ -249,11 +249,11 @@ func (f *WebSocketFeed) readLoop() {
 				}
 				f.buffer.Push(candle)
 			}
-			
+
 			// Broadcast immediately
 			f.broadcast(candle)
 		}
-		
+
 		// Update last activity time
 		f.lastPingMu.Lock()
 		f.lastPing = time.Now()
@@ -273,12 +273,12 @@ func (f *WebSocketFeed) parseMessage(message []byte) (*market.Candle, error) {
 		Close     float64 `json:"close"`
 		Volume    float64 `json:"volume"`
 	}
-	
+
 	err := json.Unmarshal(message, &data)
 	if err != nil {
 		return nil, fmt.Errorf("parse message: %w", err)
 	}
-	
+
 	candle := &market.Candle{
 		Timestamp: time.Unix(data.Timestamp, 0),
 		Open:      data.Open,
@@ -287,22 +287,22 @@ func (f *WebSocketFeed) parseMessage(message []byte) (*market.Candle, error) {
 		Close:     data.Close,
 		Volume:    data.Volume,
 	}
-	
+
 	// Validate candle
 	if !candle.IsValid() {
 		return nil, fmt.Errorf("invalid candle: %+v", candle)
 	}
-	
+
 	return candle, nil
 }
 
 // heartbeatLoop monitors connection health via ping/pong.
 func (f *WebSocketFeed) heartbeatLoop() {
 	defer f.wg.Done()
-	
+
 	ticker := time.NewTicker(f.pingInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-f.ctx.Done():
@@ -311,18 +311,18 @@ func (f *WebSocketFeed) heartbeatLoop() {
 			if f.State() != StateConnected {
 				continue
 			}
-			
+
 			// Check if we've received any message recently
 			f.lastPingMu.RLock()
 			lastActivity := f.lastPing
 			f.lastPingMu.RUnlock()
-			
+
 			if time.Since(lastActivity) > f.pingInterval+f.pongTimeout {
 				// Connection appears stale, trigger reconnection
 				f.errChan <- fmt.Errorf("heartbeat timeout")
 				return
 			}
-			
+
 			// Send ping
 			if f.conn != nil {
 				err := f.conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(5*time.Second))
@@ -338,7 +338,7 @@ func (f *WebSocketFeed) heartbeatLoop() {
 // errorHandler handles errors and triggers reconnection.
 func (f *WebSocketFeed) errorHandler() {
 	defer f.wg.Done()
-	
+
 	for {
 		select {
 		case <-f.ctx.Done():
@@ -347,18 +347,18 @@ func (f *WebSocketFeed) errorHandler() {
 			if err == nil {
 				continue
 			}
-			
+
 			// Check if we should reconnect
 			if f.State() == StateClosed {
 				return
 			}
-			
+
 			// Close current connection
 			if f.conn != nil {
 				f.conn.Close()
 				f.conn = nil
 			}
-			
+
 			// Trigger reconnection
 			f.setState(StateDisconnected)
 			f.reconnect()
@@ -369,21 +369,21 @@ func (f *WebSocketFeed) errorHandler() {
 // reconnect attempts to reconnect with exponential backoff.
 func (f *WebSocketFeed) reconnect() {
 	f.setState(StateReconnecting)
-	
+
 	for f.reconnectAttempt < f.maxReconnects {
 		select {
 		case <-f.ctx.Done():
 			return
 		default:
 		}
-		
+
 		f.reconnectAttempt++
-		
+
 		// Calculate exponential backoff delay
 		delay := f.calculateBackoff()
-		
+
 		time.Sleep(delay)
-		
+
 		// Attempt reconnection
 		f.stateMu.Lock()
 		if f.state == StateClosed {
@@ -392,27 +392,27 @@ func (f *WebSocketFeed) reconnect() {
 		}
 		f.state = StateConnecting
 		f.stateMu.Unlock()
-		
+
 		conn, _, err := websocket.DefaultDialer.Dial(f.url, nil)
 		if err != nil {
 			// Connection failed, continue loop
 			f.setState(StateReconnecting)
 			continue
 		}
-		
+
 		// Reconnection successful
 		f.conn = conn
 		f.setState(StateConnected)
 		f.reconnectAttempt = 0
-		
+
 		// Restart background goroutines
 		f.wg.Add(2)
 		go f.readLoop()
 		go f.heartbeatLoop()
-		
+
 		return
 	}
-	
+
 	// Max reconnection attempts reached
 	f.setState(StateDisconnected)
 }
@@ -421,12 +421,12 @@ func (f *WebSocketFeed) reconnect() {
 // Formula: min(baseDelay * 2^attempt, maxDelay)
 func (f *WebSocketFeed) calculateBackoff() time.Duration {
 	const maxDelay = 60 * time.Second
-	
+
 	delay := f.reconnectDelay * time.Duration(1<<uint(f.reconnectAttempt-1))
 	if delay > maxDelay {
 		delay = maxDelay
 	}
-	
+
 	return delay
 }
 
@@ -434,7 +434,7 @@ func (f *WebSocketFeed) calculateBackoff() time.Duration {
 func (f *WebSocketFeed) broadcast(candle *market.Candle) {
 	f.subMu.RLock()
 	defer f.subMu.RUnlock()
-	
+
 	for _, ch := range f.subscribers {
 		select {
 		case ch <- candle:

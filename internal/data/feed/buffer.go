@@ -20,7 +20,7 @@ func NewCandleBuffer(maxSize int) *CandleBuffer {
 	if maxSize <= 0 {
 		maxSize = 1000
 	}
-	
+
 	return &CandleBuffer{
 		candles:  make([]*market.Candle, 0, maxSize),
 		maxSize:  maxSize,
@@ -34,15 +34,15 @@ func (b *CandleBuffer) Push(candle *market.Candle) error {
 	if candle == nil {
 		return fmt.Errorf("cannot push nil candle")
 	}
-	
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if len(b.candles) < b.maxSize {
 		b.candles = append(b.candles, candle)
 		return nil
 	}
-	
+
 	// Buffer is full, try overflow channel
 	select {
 	case b.overflow <- candle:
@@ -56,15 +56,15 @@ func (b *CandleBuffer) Push(candle *market.Candle) error {
 func (b *CandleBuffer) Drain() []*market.Candle {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if len(b.candles) == 0 {
 		return nil
 	}
-	
+
 	result := make([]*market.Candle, len(b.candles))
 	copy(result, b.candles)
 	b.candles = b.candles[:0]
-	
+
 	return result
 }
 

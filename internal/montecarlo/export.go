@@ -58,7 +58,7 @@ func (mcr *MCResult) ExportToText() string {
 
 	sb.WriteString("Risk Metrics:\n")
 	sb.WriteString(fmt.Sprintf("  Probability of Ruin: %.2f%%\n", stats.ProbabilityOfRuin*100))
-	sb.WriteString(fmt.Sprintf("  Negative Returns: %d (%.1f%%)\n", 
+	sb.WriteString(fmt.Sprintf("  Negative Returns: %d (%.1f%%)\n",
 		stats.NegativeReturnCount, stats.NegativeReturnRatio*100))
 
 	sb.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
@@ -298,14 +298,14 @@ func (mcr *MCResult) ExportDrawdownDistributionToCSV(filepath string) error {
 
 // RiskAnalysis provides risk assessment based on Monte Carlo results.
 type RiskAnalysis struct {
-	WorstCase5Pct        float64 // 5th percentile return
-	BestCase95Pct        float64 // 95th percentile return
-	ProbabilityProfit    float64 // % of simulations with positive return
-	ProbabilityLoss      float64 // % of simulations with negative return
-	ExpectedReturn       float64 // mean return
-	WorstDrawdown95Pct   float64 // 95th percentile max drawdown
-	RiskOfRuin           float64 // probability of catastrophic loss
-	ConsistencyScore     float64 // 0-100, based on return variance
+	WorstCase5Pct      float64 // 5th percentile return
+	BestCase95Pct      float64 // 95th percentile return
+	ProbabilityProfit  float64 // % of simulations with positive return
+	ProbabilityLoss    float64 // % of simulations with negative return
+	ExpectedReturn     float64 // mean return
+	WorstDrawdown95Pct float64 // 95th percentile max drawdown
+	RiskOfRuin         float64 // probability of catastrophic loss
+	ConsistencyScore   float64 // 0-100, based on return variance
 }
 
 // AnalyzeRisk performs comprehensive risk analysis.

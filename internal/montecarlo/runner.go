@@ -6,9 +6,9 @@ import (
 
 // Runner executes Monte Carlo simulations
 type Runner struct {
-	config       MCConfig
-	reshuffler   *Reshuffler
-	initialTrades []Trade
+	config         MCConfig
+	reshuffler     *Reshuffler
+	initialTrades  []Trade
 	initialCapital float64
 }
 
@@ -19,9 +19,9 @@ func NewRunner(config MCConfig, initialTrades []Trade, initialCapital float64) *
 	}
 
 	return &Runner{
-		config:       config,
-		reshuffler:   NewReshuffler(config.Seed),
-		initialTrades: initialTrades,
+		config:         config,
+		reshuffler:     NewReshuffler(config.Seed),
+		initialTrades:  initialTrades,
 		initialCapital: initialCapital,
 	}
 }
@@ -140,11 +140,11 @@ func (r *Runner) calculateConfidenceIntervals(simulations []SimulationResult) []
 	intervals := make([]ConfidenceLevel, 0, len(percentiles))
 	for _, p := range percentiles {
 		interval := ConfidenceLevel{
-			Percentile:    p,
-			TotalReturn:   CalculatePercentile(returns, p),
-			MaxDrawdown:   CalculatePercentile(drawdowns, p),
-			WinRate:       CalculatePercentile(winRates, p),
-			SharpeRatio:   CalculatePercentile(sharpes, p),
+			Percentile:  p,
+			TotalReturn: CalculatePercentile(returns, p),
+			MaxDrawdown: CalculatePercentile(drawdowns, p),
+			WinRate:     CalculatePercentile(winRates, p),
+			SharpeRatio: CalculatePercentile(sharpes, p),
 		}
 		intervals = append(intervals, interval)
 	}

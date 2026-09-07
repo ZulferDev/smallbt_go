@@ -32,7 +32,7 @@ func TestLoadCandles(t *testing.T) {
 		candles, err := loadCandles(csvPath, market.Timeframe1h)
 		require.NoError(t, err)
 		assert.NotEmpty(t, candles)
-		
+
 		// Verify first candle
 		assert.Equal(t, 100.0, candles[0].Open)
 		assert.Equal(t, 105.0, candles[0].High)
@@ -86,7 +86,7 @@ func TestFilterCandlesByTime(t *testing.T) {
 	t.Run("filter with start time only", func(t *testing.T) {
 		start := baseTime.Add(2 * time.Hour)
 		filtered := filterCandlesByTime(candles, start, time.Time{})
-		
+
 		assert.Len(t, filtered, 3)
 		assert.Equal(t, 102.0, filtered[0].Close)
 		assert.Equal(t, 103.0, filtered[1].Close)
@@ -96,7 +96,7 @@ func TestFilterCandlesByTime(t *testing.T) {
 	t.Run("filter with end time only", func(t *testing.T) {
 		end := baseTime.Add(3 * time.Hour)
 		filtered := filterCandlesByTime(candles, time.Time{}, end)
-		
+
 		assert.Len(t, filtered, 3)
 		assert.Equal(t, 100.0, filtered[0].Close)
 		assert.Equal(t, 101.0, filtered[1].Close)
@@ -107,7 +107,7 @@ func TestFilterCandlesByTime(t *testing.T) {
 		start := baseTime.Add(1 * time.Hour)
 		end := baseTime.Add(3 * time.Hour)
 		filtered := filterCandlesByTime(candles, start, end)
-		
+
 		assert.Len(t, filtered, 2)
 		assert.Equal(t, 101.0, filtered[0].Close)
 		assert.Equal(t, 102.0, filtered[1].Close)
@@ -115,7 +115,7 @@ func TestFilterCandlesByTime(t *testing.T) {
 
 	t.Run("no time filters", func(t *testing.T) {
 		filtered := filterCandlesByTime(candles, time.Time{}, time.Time{})
-		
+
 		assert.Len(t, filtered, 5)
 		assert.Equal(t, candles, filtered)
 	})
@@ -124,27 +124,27 @@ func TestFilterCandlesByTime(t *testing.T) {
 		start := baseTime.Add(2 * time.Hour)
 		end := baseTime.Add(2 * time.Hour)
 		filtered := filterCandlesByTime(candles, start, end)
-		
+
 		assert.Empty(t, filtered)
 	})
 
 	t.Run("start after all candles", func(t *testing.T) {
 		start := baseTime.Add(10 * time.Hour)
 		filtered := filterCandlesByTime(candles, start, time.Time{})
-		
+
 		assert.Empty(t, filtered)
 	})
 
 	t.Run("end before all candles", func(t *testing.T) {
 		end := baseTime.Add(-1 * time.Hour)
 		filtered := filterCandlesByTime(candles, time.Time{}, end)
-		
+
 		assert.Empty(t, filtered)
 	})
 
 	t.Run("empty candle slice", func(t *testing.T) {
 		filtered := filterCandlesByTime([]*market.Candle{}, baseTime, baseTime.Add(1*time.Hour))
-		
+
 		assert.Empty(t, filtered)
 	})
 }
@@ -159,7 +159,7 @@ func TestCreateSlippageModel(t *testing.T) {
 			Quantity: 1.0,
 		}
 	}
-	
+
 	createTestCandle := func() *market.Candle {
 		return &market.Candle{
 			Timestamp: time.Now(),
@@ -174,7 +174,7 @@ func TestCreateSlippageModel(t *testing.T) {
 	t.Run("fixed slippage model", func(t *testing.T) {
 		params := map[string]float64{"value": 0.5}
 		model := createSlippageModel("fixed", params)
-		
+
 		assert.NotNil(t, model)
 		req := createTestOrder()
 		candle := createTestCandle()
@@ -186,7 +186,7 @@ func TestCreateSlippageModel(t *testing.T) {
 	t.Run("percentage slippage model", func(t *testing.T) {
 		params := map[string]float64{"value": 0.001}
 		model := createSlippageModel("percentage", params)
-		
+
 		assert.NotNil(t, model)
 		req := createTestOrder()
 		candle := createTestCandle()
@@ -198,7 +198,7 @@ func TestCreateSlippageModel(t *testing.T) {
 	t.Run("volatility slippage model", func(t *testing.T) {
 		params := map[string]float64{"value": 0.5, "max": 2.0}
 		model := createSlippageModel("volatility", params)
-		
+
 		assert.NotNil(t, model)
 		req := createTestOrder()
 		candle := createTestCandle()
@@ -211,7 +211,7 @@ func TestCreateSlippageModel(t *testing.T) {
 	t.Run("volume slippage model", func(t *testing.T) {
 		params := map[string]float64{"value": 0.01, "max": 1.0}
 		model := createSlippageModel("volume", params)
-		
+
 		assert.NotNil(t, model)
 		req := createTestOrder()
 		candle := createTestCandle()
@@ -224,7 +224,7 @@ func TestCreateSlippageModel(t *testing.T) {
 	t.Run("no slippage model", func(t *testing.T) {
 		params := map[string]float64{}
 		model := createSlippageModel("none", params)
-		
+
 		assert.NotNil(t, model)
 		req := createTestOrder()
 		candle := createTestCandle()
@@ -236,7 +236,7 @@ func TestCreateSlippageModel(t *testing.T) {
 	t.Run("unknown model defaults to no slippage", func(t *testing.T) {
 		params := map[string]float64{"value": 1.0}
 		model := createSlippageModel("unknown_model", params)
-		
+
 		assert.NotNil(t, model)
 		req := createTestOrder()
 		candle := createTestCandle()
@@ -248,7 +248,7 @@ func TestCreateSlippageModel(t *testing.T) {
 	t.Run("empty model name", func(t *testing.T) {
 		params := map[string]float64{}
 		model := createSlippageModel("", params)
-		
+
 		assert.NotNil(t, model)
 		req := createTestOrder()
 		candle := createTestCandle()
@@ -260,7 +260,7 @@ func TestCreateSlippageModel(t *testing.T) {
 	t.Run("missing params uses zero values", func(t *testing.T) {
 		// Empty params map
 		model := createSlippageModel("fixed", map[string]float64{})
-		
+
 		assert.NotNil(t, model)
 		req := createTestOrder()
 		candle := createTestCandle()
@@ -307,7 +307,7 @@ func TestCreateSlippageModelTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			model := createSlippageModel(tt.modelName, tt.params)
 			assert.NotNil(t, model)
-			
+
 			// Verify model implements execution.SlippageModel interface
 			var _ execution.SlippageModel = model
 		})

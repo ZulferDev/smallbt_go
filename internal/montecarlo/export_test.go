@@ -300,7 +300,7 @@ func TestRiskInterpretations(t *testing.T) {
 	for _, tt := range tests {
 		interp := getReturnInterpretation(tt.ret)
 		if !containsString(interp, tt.contains) {
-			t.Errorf("For return %.2f, expected '%s' in interpretation, got '%s'", 
+			t.Errorf("For return %.2f, expected '%s' in interpretation, got '%s'",
 				tt.ret, tt.contains, interp)
 		}
 	}
@@ -320,7 +320,7 @@ func TestProbabilityInterpretation(t *testing.T) {
 	for _, tt := range tests {
 		interp := getProbabilityInterpretation(tt.prob)
 		if !containsString(interp, tt.contains) {
-			t.Errorf("For probability %.2f, expected '%s' in interpretation, got '%s'", 
+			t.Errorf("For probability %.2f, expected '%s' in interpretation, got '%s'",
 				tt.prob, tt.contains, interp)
 		}
 	}
@@ -340,7 +340,7 @@ func TestRiskOfRuinInterpretation(t *testing.T) {
 	for _, tt := range tests {
 		interp := getRiskOfRuinInterpretation(tt.risk)
 		if !containsString(interp, tt.contains) {
-			t.Errorf("For risk %.3f, expected '%s' in interpretation, got '%s'", 
+			t.Errorf("For risk %.3f, expected '%s' in interpretation, got '%s'",
 				tt.risk, tt.contains, interp)
 		}
 	}
@@ -360,7 +360,7 @@ func TestConsistencyInterpretation(t *testing.T) {
 	for _, tt := range tests {
 		interp := getConsistencyInterpretation(tt.score)
 		if !containsString(interp, tt.contains) {
-			t.Errorf("For score %.0f, expected '%s' in interpretation, got '%s'", 
+			t.Errorf("For score %.0f, expected '%s' in interpretation, got '%s'",
 				tt.score, tt.contains, interp)
 		}
 	}
@@ -376,14 +376,14 @@ func TestMultipleSimulations(t *testing.T) {
 		},
 		Simulations: make([]SimulationResult, 1000),
 		Statistics: MCStatistics{
-			MeanReturn:       0.15,
-			MedianReturn:     0.14,
-			StdDevReturn:     0.08,
-			P05Return:        0.02,
-			P95Return:        0.28,
-			MeanMaxDrawdown:  0.12,
-			P95MaxDrawdown:   0.22,
-			ProbabilityOfRuin: 0.01,
+			MeanReturn:          0.15,
+			MedianReturn:        0.14,
+			StdDevReturn:        0.08,
+			P05Return:           0.02,
+			P95Return:           0.28,
+			MeanMaxDrawdown:     0.12,
+			P95MaxDrawdown:      0.22,
+			ProbabilityOfRuin:   0.01,
 			NegativeReturnCount: 50,
 			NegativeReturnRatio: 0.05,
 		},

@@ -30,7 +30,7 @@ func TestAligner_EmptyInput(t *testing.T) {
 
 func TestAligner_SingleSymbol(t *testing.T) {
 	a := NewDefaultAligner()
-	
+
 	input := map[string][]*market.Candle{
 		"BTC": {
 			{Timestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC), Open: 100, High: 110, Low: 90, Close: 105, Volume: 1000},

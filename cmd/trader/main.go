@@ -197,9 +197,9 @@ func runValidateTransforms(args []string) error {
 
 	// Parse YAML to extract transforms section
 	var strategyYAML struct {
-		Name string `yaml:"name"`
+		Name    string `yaml:"name"`
 		Version string `yaml:"version"`
-		Data struct {
+		Data    struct {
 			Transforms *integration.TransformConfig `yaml:"transforms"`
 		} `yaml:"data"`
 	}
@@ -233,15 +233,15 @@ func runValidateTransforms(args []string) error {
 
 	for i, tc := range transformConfig.Transforms {
 		fmt.Printf("%d. Transform: %s\n", i+1, tc.Type)
-		
+
 		// Basic validation - check type is not empty
 		if tc.Type == "" {
 			fmt.Printf("   ❌ INVALID: transform type is empty\n")
 			return fmt.Errorf("transform %d has empty type", i+1)
 		}
-		
+
 		fmt.Printf("   ✅ Valid configuration\n")
-		
+
 		// Show parameters
 		if len(tc.Params) > 0 {
 			fmt.Println("   Parameters:")
@@ -269,13 +269,13 @@ func runBacktest(args []string) error {
 	timeframe := fs.String("timeframe", "1h", "Timeframe (e.g., 1m, 5m, 15m, 30m, 1h, 4h, 1d)")
 	startDate := fs.String("start", "", "Start date (YYYY-MM-DD)")
 	endDate := fs.String("end", "", "End date (YYYY-MM-DD)")
-	
+
 	// Execution configuration
 	commission := fs.Float64("commission", 0.001, "Commission rate (e.g., 0.001 = 0.1%)")
 	slippageModel := fs.String("slippage-model", "none", "Slippage model: none, fixed, percentage, volatility, volume")
 	slippageValue := fs.Float64("slippage", 0.0, "Slippage amount (meaning depends on model)")
 	slippageMax := fs.Float64("slippage-max", 0.01, "Max slippage for volatility/volume models (default 1%)")
-	
+
 	cpuProfile := fs.String("cpuprofile", "", "Write CPU profile to file")
 	memProfile := fs.String("memprofile", "", "Write memory profile to file")
 
@@ -427,7 +427,7 @@ func runBacktest(args []string) error {
 			return fmt.Errorf("write JSON file: %w", err)
 		}
 		fmt.Printf("Results saved to %s\n", *outputJSON)
-		
+
 		// Auto-generate CSV trade history from JSON output path
 		csvPath := strings.TrimSuffix(*outputJSON, ".json") + ".csv"
 		if err := exportTradesToCSV(result.TradeHistory, csvPath); err != nil {
@@ -770,9 +770,9 @@ func runWalkforward(args []string) error {
 		for i := 0; i < min(5, wfa.WindowCount()); i++ {
 			window := wfa.GetWindow(i)
 			if window != nil {
-				fmt.Printf("  Window %d: Train [%d-%d], Test [%d-%d]\n", 
-					window.WindowID, 
-					window.TrainStart, 
+				fmt.Printf("  Window %d: Train [%d-%d], Test [%d-%d]\n",
+					window.WindowID,
+					window.TrainStart,
 					window.TrainEnd,
 					window.TestStart,
 					window.TestEnd)
@@ -792,15 +792,15 @@ func runWalkforward(args []string) error {
 	if *outputJSON != "" {
 		// For now, save basic configuration
 		output := map[string]interface{}{
-			"strategy":       *strategyPath,
-			"symbol":         *symbol,
-			"timeframe":      strategyAST.Data.Timeframe,
-			"total_bars":     totalBars,
-			"train_bars":     *trainBars,
-			"test_bars":      *testBars,
-			"step_bars":      config.StepBars,
-			"window_count":   wfa.WindowCount(),
-			"windows":        wfa.Windows,
+			"strategy":     *strategyPath,
+			"symbol":       *symbol,
+			"timeframe":    strategyAST.Data.Timeframe,
+			"total_bars":   totalBars,
+			"train_bars":   *trainBars,
+			"test_bars":    *testBars,
+			"step_bars":    config.StepBars,
+			"window_count": wfa.WindowCount(),
+			"windows":      wfa.Windows,
 		}
 
 		jsonBytes, err := json.MarshalIndent(output, "", "  ")
@@ -964,23 +964,23 @@ func runMonteCarlo(args []string) error {
 	// Export to JSON if requested
 	if *outputJSON != "" {
 		output := map[string]interface{}{
-			"strategy":             result.StrategyName,
-			"symbol":               result.Config.Symbol,
-			"timeframe":            result.Config.Timeframe,
-			"trades":               result.TotalTrades,
-			"simulations":          *simulations,
-			"seed":                 *seed,
-			"mean_return":          stats.MeanReturn,
-			"std_dev":              stats.StdDevReturn,
-			"mean_sharpe":          stats.MeanSharpe,
-			"percentile_5":         stats.P05Return,
-			"percentile_50":        stats.MedianReturn,
-			"percentile_95":        stats.P95Return,
-			"probability_of_loss":  stats.NegativeReturnRatio,
-			"probability_of_gain":  1 - stats.NegativeReturnRatio,
-			"probability_of_ruin":  stats.ProbabilityOfRuin,
-			"mean_max_drawdown":    stats.MeanMaxDrawdown,
-			"percentile_95_dd":     stats.P95MaxDrawdown,
+			"strategy":            result.StrategyName,
+			"symbol":              result.Config.Symbol,
+			"timeframe":           result.Config.Timeframe,
+			"trades":              result.TotalTrades,
+			"simulations":         *simulations,
+			"seed":                *seed,
+			"mean_return":         stats.MeanReturn,
+			"std_dev":             stats.StdDevReturn,
+			"mean_sharpe":         stats.MeanSharpe,
+			"percentile_5":        stats.P05Return,
+			"percentile_50":       stats.MedianReturn,
+			"percentile_95":       stats.P95Return,
+			"probability_of_loss": stats.NegativeReturnRatio,
+			"probability_of_gain": 1 - stats.NegativeReturnRatio,
+			"probability_of_ruin": stats.ProbabilityOfRuin,
+			"mean_max_drawdown":   stats.MeanMaxDrawdown,
+			"percentile_95_dd":    stats.P95MaxDrawdown,
 			"confidence_interval": []float64{
 				stats.P05Return,
 				stats.P95Return,
@@ -1121,7 +1121,7 @@ func runPaper(args []string) error {
 	initialBalance := fs.Float64("balance", 10000.0, "Initial balance")
 	duration := fs.Int("duration", 60, "Duration in seconds")
 	websocketURL := fs.String("websocket", "", "WebSocket URL for real-time data (optional)")
-	
+
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
 	}
@@ -1169,7 +1169,7 @@ func runPaper(args []string) error {
 
 	// Simple price simulation: static price for MVP
 	// TODO: Add price feed with random walk or live data
-	
+
 	startTime := time.Now()
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
@@ -1202,7 +1202,7 @@ func runPaper(args []string) error {
 
 func printPaperSummary(broker *broker.PaperBroker) error {
 	ctx := context.Background()
-	
+
 	positions, err := broker.GetPositions(ctx)
 	if err != nil {
 		return fmt.Errorf("get positions: %w", err)
@@ -1240,61 +1240,61 @@ func runPaperWithWebSocket(broker *broker.PaperBroker, wsURL, symbol string, dur
 	config.URL = wsURL
 	config.Symbols = []string{symbol}
 	config.Timeframe = time.Hour // Default 1h
-	
+
 	wsFeed := feed.NewWebSocketFeed(config)
-	
+
 	err := wsFeed.Connect()
 	if err != nil {
 		return fmt.Errorf("connect to WebSocket: %w", err)
 	}
 	defer wsFeed.Close()
-	
+
 	fmt.Printf("Connected to WebSocket: %s\n", wsURL)
 	fmt.Printf("Subscribing to: %s\n\n", symbol)
-	
+
 	// Subscribe to candle updates
 	candleCh := wsFeed.Subscribe()
-	
+
 	startTime := time.Now()
 	timeout := time.After(time.Duration(durationSec) * time.Second)
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
-	
+
 	candleCount := 0
-	
+
 	for {
 		select {
 		case <-timeout:
 			fmt.Println("\nPaper trading session complete")
 			fmt.Printf("Received %d candles\n", candleCount)
 			return printPaperSummary(broker)
-			
+
 		case candle := <-candleCh:
 			if candle == nil {
 				continue
 			}
-			
+
 			candleCount++
-			
+
 			// Update broker with latest price
 			broker.UpdatePrice(symbol, candle.Close)
-			
+
 			// Log candle
 			fmt.Printf("[Candle %d] %s | O:%.2f H:%.2f L:%.2f C:%.2f V:%.2f\n",
 				candleCount,
 				candle.Timestamp.Format("15:04:05"),
 				candle.Open, candle.High, candle.Low, candle.Close, candle.Volume)
-			
+
 		case <-ticker.C:
 			// Print status
 			ctx := context.Background()
 			positions, _ := broker.GetPositions(ctx)
 			balance, _ := broker.GetBalance(ctx)
-			
+
 			elapsed := time.Since(startTime).Seconds()
 			fmt.Printf("\n[%.0fs] Balance: %.2f | Equity: %.2f | Positions: %d | Candles: %d\n",
 				elapsed, balance.Cash, balance.Equity, len(positions), candleCount)
-			
+
 			for _, pos := range positions {
 				pnl := pos.UnrealizedPnL()
 				fmt.Printf("  %s: %.4f @ %.2f (PnL: %.2f)\n",
@@ -1309,32 +1309,32 @@ func runExportTrades(args []string) error {
 	fs := flag.NewFlagSet("export-trades", flag.ExitOnError)
 	resultPath := fs.String("result", "", "Path to backtest result JSON file")
 	outputPath := fs.String("output", "trades.csv", "Output CSV file path")
-	
+
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	
+
 	if *resultPath == "" {
 		return fmt.Errorf("--result is required")
 	}
-	
+
 	// Load result
 	resultData, err := os.ReadFile(*resultPath)
 	if err != nil {
 		return fmt.Errorf("read result file: %w", err)
 	}
-	
+
 	var result backtest.BacktestResult
 	if err := json.Unmarshal(resultData, &result); err != nil {
 		return fmt.Errorf("parse result JSON: %w", err)
 	}
-	
+
 	// Export trades
 	exporter := analytics.NewTradeJournalExporter(result.TradeHistory)
 	if err := exporter.ExportCSV(*outputPath); err != nil {
 		return fmt.Errorf("export CSV: %w", err)
 	}
-	
+
 	fmt.Printf("✓ Exported %d trades to %s\n", len(result.TradeHistory), *outputPath)
 	return nil
 }
@@ -1343,33 +1343,33 @@ func runAnalyzeTrades(args []string) error {
 	fs := flag.NewFlagSet("analyze-trades", flag.ExitOnError)
 	resultPath := fs.String("result", "", "Path to backtest result JSON file")
 	outputPath := fs.String("output", "", "Optional output file for analysis report")
-	
+
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	
+
 	if *resultPath == "" {
 		return fmt.Errorf("--result is required")
 	}
-	
+
 	// Load result
 	resultData, err := os.ReadFile(*resultPath)
 	if err != nil {
 		return fmt.Errorf("read result file: %w", err)
 	}
-	
+
 	var result backtest.BacktestResult
 	if err := json.Unmarshal(resultData, &result); err != nil {
 		return fmt.Errorf("parse result JSON: %w", err)
 	}
-	
+
 	// Analyze trades
 	analysis := analytics.AnalyzeTrades(result.TradeHistory)
 	report := analytics.FormatAnalysisReport(analysis)
-	
+
 	// Print to console
 	fmt.Println(report)
-	
+
 	// Save to file if requested
 	if *outputPath != "" {
 		if err := os.WriteFile(*outputPath, []byte(report), 0644); err != nil {
@@ -1377,7 +1377,7 @@ func runAnalyzeTrades(args []string) error {
 		}
 		fmt.Printf("\n✓ Analysis report saved to %s\n", *outputPath)
 	}
-	
+
 	return nil
 }
 
@@ -1387,10 +1387,10 @@ func exportTradesToCSV(trades []portfolio.Trade, filename string) error {
 		// Create empty CSV with header
 		return os.WriteFile(filename, []byte("timestamp,symbol,side,entry_time,exit_time,entry_price,exit_price,quantity,gross_pnl,fees,net_pnl,return,mae,mfe,duration_hours\n"), 0644)
 	}
-	
+
 	var buf strings.Builder
 	buf.WriteString("timestamp,symbol,side,entry_time,exit_time,entry_price,exit_price,quantity,gross_pnl,fees,net_pnl,return,mae,mfe,duration_hours\n")
-	
+
 	for _, trade := range trades {
 		duration := trade.ExitTime.Sub(trade.EntryTime).Hours()
 		buf.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%.8f,%.8f,%.8f,%.2f,%.2f,%.2f,%.6f,%.2f,%.2f,%.2f\n",
@@ -1411,6 +1411,6 @@ func exportTradesToCSV(trades []portfolio.Trade, filename string) error {
 			duration,
 		))
 	}
-	
+
 	return os.WriteFile(filename, []byte(buf.String()), 0644)
 }

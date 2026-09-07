@@ -10,9 +10,9 @@ import (
 // CachedParquetReader wraps ParquetReader with caching layer.
 // Caches validated candle data to avoid redundant file reads and validation.
 type CachedParquetReader struct {
-	reader *ParquetReader
-	cache  cache.Cache
-	symbol string
+	reader    *ParquetReader
+	cache     cache.Cache
+	symbol    string
 	timeframe string
 }
 

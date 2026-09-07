@@ -123,11 +123,11 @@ func (r *RiskRewardAnalyzer) Calculate(input analytics.AnalysisInput) (interface
 
 // TradeBreakdown contains statistics broken down by trade side.
 type TradeBreakdown struct {
-	LongTrades    int     `json:"long_trades"`
-	ShortTrades   int     `json:"short_trades"`
-	LongWinRate   float64 `json:"long_win_rate"`
-	ShortWinRate  float64 `json:"short_win_rate"`
-	LongNetProfit float64 `json:"long_net_profit"`
+	LongTrades     int     `json:"long_trades"`
+	ShortTrades    int     `json:"short_trades"`
+	LongWinRate    float64 `json:"long_win_rate"`
+	ShortWinRate   float64 `json:"short_win_rate"`
+	LongNetProfit  float64 `json:"long_net_profit"`
 	ShortNetProfit float64 `json:"short_net_profit"`
 }
 
@@ -207,10 +207,10 @@ func (r *ReturnStdDevAnalyzer) Calculate(input analytics.AnalysisInput) (interfa
 
 // MonthlyStats contains monthly performance statistics.
 type MonthlyStats struct {
-	Month      string  `json:"month"`
-	Trades     int     `json:"trades"`
-	NetProfit  float64 `json:"net_profit"`
-	WinRate    float64 `json:"win_rate"`
+	Month     string  `json:"month"`
+	Trades    int     `json:"trades"`
+	NetProfit float64 `json:"net_profit"`
+	WinRate   float64 `json:"win_rate"`
 }
 
 // MonthlyBreakdownAnalyzer analyzes performance by month.
@@ -230,7 +230,7 @@ func (m *MonthlyBreakdownAnalyzer) Calculate(input analytics.AnalysisInput) (int
 
 	for _, trade := range input.TradeHistory {
 		month := trade.ExitTime.Format("2006-01")
-		
+
 		if _, exists := monthlyData[month]; !exists {
 			monthlyData[month] = &MonthlyStats{
 				Month: month,
@@ -270,31 +270,31 @@ func main() {
 
 	// Register all custom analyzers
 	fmt.Println("Registering custom analyzers...")
-	
+
 	if err := analytics.Register(&WinStreakAnalyzer{}); err != nil {
 		log.Fatalf("Failed to register WinStreakAnalyzer: %v", err)
 	}
-	
+
 	if err := analytics.Register(&LossStreakAnalyzer{}); err != nil {
 		log.Fatalf("Failed to register LossStreakAnalyzer: %v", err)
 	}
-	
+
 	if err := analytics.Register(&AvgTradeDurationAnalyzer{}); err != nil {
 		log.Fatalf("Failed to register AvgTradeDurationAnalyzer: %v", err)
 	}
-	
+
 	if err := analytics.Register(&RiskRewardAnalyzer{}); err != nil {
 		log.Fatalf("Failed to register RiskRewardAnalyzer: %v", err)
 	}
-	
+
 	if err := analytics.Register(&SideBreakdownAnalyzer{}); err != nil {
 		log.Fatalf("Failed to register SideBreakdownAnalyzer: %v", err)
 	}
-	
+
 	if err := analytics.Register(&ReturnStdDevAnalyzer{}); err != nil {
 		log.Fatalf("Failed to register ReturnStdDevAnalyzer: %v", err)
 	}
-	
+
 	if err := analytics.Register(&MonthlyBreakdownAnalyzer{}); err != nil {
 		log.Fatalf("Failed to register MonthlyBreakdownAnalyzer: %v", err)
 	}

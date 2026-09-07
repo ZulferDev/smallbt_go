@@ -261,7 +261,7 @@ func TestMonteCarloLargeDataset(t *testing.T) {
 	// Generate 100 random trades
 	trades := make([]montecarlo.Trade, 100)
 	for i := 0; i < 100; i++ {
-		pnl := float64((i % 20) - 10) * 10.0 // Range -100 to +90
+		pnl := float64((i%20)-10) * 10.0 // Range -100 to +90
 		trades[i] = montecarlo.Trade{
 			ID:     int64(i + 1),
 			NetPnL: pnl,

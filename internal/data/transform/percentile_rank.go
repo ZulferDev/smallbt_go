@@ -123,7 +123,7 @@ func (t *PercentileRankTransform) calculatePercentileRank(values []float64, valu
 	}
 
 	percentile := float64(rank-1) / float64(n-1) * 100.0
-	
+
 	// Clamp to [0, 100]
 	if percentile < 0 {
 		percentile = 0

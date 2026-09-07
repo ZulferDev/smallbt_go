@@ -13,8 +13,8 @@ import (
 // LegacyBroker wraps SimulatedBroker to provide backward compatibility
 // with the old Broker API used by the backtest engine
 type LegacyBroker struct {
-	broker    *SimulatedBroker
-	orderMgr  *order.OrderManager
+	broker   *SimulatedBroker
+	orderMgr *order.OrderManager
 }
 
 // NewBroker creates a legacy broker for backward compatibility with engine
@@ -23,7 +23,7 @@ func NewBroker(executor *execution.SimpleExecutor) *LegacyBroker {
 	orderMgr := order.NewOrderManager()
 	portfolio := portfolio.NewPortfolio(0) // Portfolio managed externally by engine
 	simBroker := NewSimulatedBroker(executor, portfolio)
-	
+
 	return &LegacyBroker{
 		broker:   simBroker,
 		orderMgr: orderMgr,
@@ -61,13 +61,13 @@ func (b *LegacyBroker) ProcessPendingOrders(candle *market.Candle, timestamp tim
 	// Determine symbol from pending orders or use a default
 	// In practice, backtest is single-symbol, so we can infer it
 	symbol := "BTCUSDT" // Default, will be overridden by actual orders
-	
+
 	// Get pending orders to determine symbol
 	pendingOrders := b.broker.GetPendingOrders()
 	if len(pendingOrders) > 0 {
 		symbol = string(pendingOrders[0].Symbol)
 	}
-	
+
 	return b.broker.ProcessPendingOrders(candle, symbol, timestamp)
 }
 

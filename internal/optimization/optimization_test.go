@@ -188,9 +188,9 @@ func TestOptimizationMetrics(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
+		name      string
 		objective string
-		expected float64
+		expected  float64
 	}{
 		{"sharpe ratio", "sharpe", 1.5},
 		{"sortino ratio", "sortino", 2.0},

@@ -57,7 +57,7 @@ func TestMultiSymbolTransformedFeed_AddDuplicate(t *testing.T) {
 
 	msf.AddSymbol("BTC", feed1, chain, 5)
 	err := msf.AddSymbol("BTC", feed2, chain, 5)
-	
+
 	if err == nil {
 		t.Error("Expected error when adding duplicate symbol")
 	}
@@ -311,10 +311,10 @@ func TestSwitchTransform(t *testing.T) {
 	}
 
 	st := NewSwitchTransform(NewScaleTransform(1.0, "close"))
-	
+
 	// High volume -> scale by 2
 	st.AddCase(VolumeAbove(2500.0), NewScaleTransform(2.0, "close"))
-	
+
 	// Low volume -> scale by 0.5
 	st.AddCase(VolumeBelow(1200.0), NewScaleTransform(0.5, "close"))
 
@@ -373,7 +373,7 @@ func TestParallelMultiSymbolFeed(t *testing.T) {
 		config := csv.DefaultCSVConfig(market.Symbol(symbol), "1h")
 		feed, _ := csv.NewCSVDataFeed(csvPath, config)
 		chain := NewTransformChain(NewScaleTransform(2.0, "close"))
-		
+
 		err := pmsf.AddSymbol(symbol, feed, chain, 10)
 		if err != nil {
 			t.Fatalf("AddSymbol %s failed: %v", symbol, err)

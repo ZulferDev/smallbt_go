@@ -12,21 +12,21 @@ import (
 // Compatible with testing.T instead of testing.B
 func generateTestCSVCompat(t *testing.T, numCandles int) string {
 	t.Helper()
-	
+
 	// Create temp file
 	tmpFile, err := os.CreateTemp("", "perf_test_*.csv")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	
+
 	// Write CSV header
 	fmt.Fprintln(tmpFile, "timestamp,open,high,low,close,volume")
-	
+
 	// Generate realistic OHLCV data
 	baseTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	basePrice := 10000.0
 	rnd := rand.New(rand.NewSource(42)) // Deterministic seed
-	
+
 	for i := 0; i < numCandles; i++ {
 		// Generate OHLCV values
 		open := basePrice + rnd.Float64()*100 - 50
@@ -34,17 +34,17 @@ func generateTestCSVCompat(t *testing.T, numCandles int) string {
 		high := max(open, close) + rnd.Float64()*10
 		low := min(open, close) - rnd.Float64()*10
 		volume := 1000000 + rnd.Float64()*500000
-		
+
 		// Write candle
 		timestamp := baseTime.Add(time.Duration(i) * time.Hour)
 		fmt.Fprintf(tmpFile, "%s,%.2f,%.2f,%.2f,%.2f,%.2f\n",
 			timestamp.Format("2006-01-02 15:04:05"),
 			open, high, low, close, volume)
-		
+
 		// Update base price for next candle
 		basePrice = close
 	}
-	
+
 	tmpFile.Close()
 	return tmpFile.Name()
 }

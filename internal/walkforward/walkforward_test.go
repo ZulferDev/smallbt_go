@@ -86,11 +86,11 @@ func TestNewWalkForwardAnalysis(t *testing.T) {
 
 func TestGenerateWindows(t *testing.T) {
 	tests := []struct {
-		name         string
-		config       WindowConfig
-		totalBars    int
-		wantWindows  int
-		wantErr      bool
+		name        string
+		config      WindowConfig
+		totalBars   int
+		wantWindows int
+		wantErr     bool
 	}{
 		{
 			name:        "single window",

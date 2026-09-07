@@ -20,7 +20,7 @@ type Evaluator struct {
 	candles       []market.Candle        // Historical candles
 	validityFlags map[string]bool        // Track indicator validity
 	state         map[string]interface{} // Strategy state variables
-	
+
 	// Optimization: cached indicators (optional)
 	cachedRegistry *indicator.CachedRegistry
 	stateManager   *indicator.StateManager
@@ -95,7 +95,7 @@ func (e *Evaluator) Initialize() error {
 	if e.useCached && e.cachedRegistry != nil {
 		return e.initializeCached()
 	}
-	
+
 	// Fallback to stateless path (original behavior)
 	return e.initializeStateless()
 }
@@ -144,7 +144,7 @@ func (e *Evaluator) initializeCached() error {
 
 		// Register with state manager for incremental updates
 		e.stateManager.Register(name, cachedInd)
-		
+
 		// Also store in indicators map for compatibility
 		e.indicators[name] = cachedInd
 	}
@@ -316,7 +316,7 @@ func (e *Evaluator) UpdateCandle(candle market.Candle) error {
 	if e.useCached && e.stateManager != nil {
 		return e.updateCandleCached(candle)
 	}
-	
+
 	// Fallback to stateless path (original behavior)
 	return e.updateCandleStateless(candle)
 }
@@ -481,7 +481,6 @@ func (e *Evaluator) updateCandleStateless(candle market.Candle) error {
 		if e.context.BarIndex == 0 {
 		}
 	}
-
 
 	return nil
 }

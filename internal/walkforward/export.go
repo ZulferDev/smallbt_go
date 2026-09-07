@@ -178,20 +178,20 @@ func (wfa *WalkForwardAnalysis) ExportAggregateResultToCSV(filepath string) erro
 
 // StabilityAnalysis analyzes consistency across walk forward windows.
 type StabilityAnalysis struct {
-	TotalWindows         int
-	ProfitableWindows    int
-	UnprofitableWindows  int
-	ConsistencyScore     float64 // 0-100
-	AvgReturnStdDev      float64
-	AvgSharpeStdDev      float64
-	WorstWindow          int
-	BestWindow           int
-	WorstWindowReturn    float64
-	BestWindowReturn     float64
-	DegradationHigh      int // Count of high degradation windows
-	DegradationModerate  int
-	DegradationLow       int
-	ImprovedWindows      int
+	TotalWindows        int
+	ProfitableWindows   int
+	UnprofitableWindows int
+	ConsistencyScore    float64 // 0-100
+	AvgReturnStdDev     float64
+	AvgSharpeStdDev     float64
+	WorstWindow         int
+	BestWindow          int
+	WorstWindowReturn   float64
+	BestWindowReturn    float64
+	DegradationHigh     int // Count of high degradation windows
+	DegradationModerate int
+	DegradationLow      int
+	ImprovedWindows     int
 }
 
 // AnalyzeStability analyzes performance stability across windows.
@@ -201,9 +201,9 @@ func (wfa *WalkForwardAnalysis) AnalyzeStability() *StabilityAnalysis {
 	}
 
 	analysis := &StabilityAnalysis{
-		TotalWindows:     len(wfa.Results),
+		TotalWindows:      len(wfa.Results),
 		WorstWindowReturn: 1e9,
-		BestWindowReturn: -1e9,
+		BestWindowReturn:  -1e9,
 	}
 
 	var returns []float64
@@ -266,13 +266,13 @@ func (wfa *WalkForwardAnalysis) AnalyzeStability() *StabilityAnalysis {
 	// - Low return volatility (30%)
 	// - Low degradation (30%)
 	profitableRatio := float64(analysis.ProfitableWindows) / float64(analysis.TotalWindows)
-	
+
 	// Normalize std dev (assume typical is 0.2, max reasonable is 1.0)
 	volatilityScore := 1.0 - min(analysis.AvgReturnStdDev/1.0, 1.0)
-	
+
 	// Degradation score
 	degradationScore := float64(analysis.ImprovedWindows+analysis.DegradationLow) / float64(analysis.TotalWindows)
-	
+
 	analysis.ConsistencyScore = (profitableRatio*40 + volatilityScore*30 + degradationScore*30)
 
 	return analysis

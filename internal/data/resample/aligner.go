@@ -40,15 +40,16 @@ func NewDefaultAligner() *DefaultAligner {
 }
 
 // Align synchronizes candles from multiple symbols to a common timeline.
-// 
+//
 // Algorithm:
 // 1. Collect all unique timestamps across all symbols
 // 2. Sort timestamps chronologically
 // 3. For each timestamp, get candle from each symbol:
-//    - If candle exists at timestamp: use it
-//    - If missing + FillStrategyForward: use last known candle
-//    - If missing + FillStrategyDrop: skip this timestamp
-//    - If missing + FillStrategyNone: return error
+//   - If candle exists at timestamp: use it
+//   - If missing + FillStrategyForward: use last known candle
+//   - If missing + FillStrategyDrop: skip this timestamp
+//   - If missing + FillStrategyNone: return error
+//
 // 4. Return aligned data
 func (a *DefaultAligner) Align(symbolData map[string][]*market.Candle) (map[string][]*market.Candle, error) {
 	if len(symbolData) == 0 {

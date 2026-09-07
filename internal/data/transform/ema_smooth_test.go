@@ -178,7 +178,7 @@ func TestEMASmooth_AlphaCalculation(t *testing.T) {
 	// Test different periods produce different alpha values
 	// Period 2: α = 2/(2+1) = 0.667
 	// Period 10: α = 2/(10+1) = 0.182
-	
+
 	candles := []*market.Candle{
 		{Timestamp: time.Now(), Close: 100},
 		{Timestamp: time.Now(), Close: 200},
@@ -319,7 +319,7 @@ func TestEMASmooth_CompareWithSMA(t *testing.T) {
 
 	// In uptrend, EMA should be closer to recent values than midpoint
 	lastEMA := emaResult[4].Close
-	
+
 	// Last EMA should be between 130 and 140 (closer to recent)
 	if lastEMA < 120 || lastEMA > 140 {
 		t.Errorf("EMA in uptrend = %f, expected between 120 and 140", lastEMA)

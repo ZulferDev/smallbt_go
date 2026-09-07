@@ -12,7 +12,7 @@ type SlippageModel interface {
 	// CalculateSlippage computes slippage for an order.
 	// Returns the slippage amount (positive for adverse, negative for favorable).
 	CalculateSlippage(req order.OrderRequest, fillPrice float64, candle *market.Candle) (float64, error)
-	
+
 	// Name returns the model name for logging/debugging.
 	Name() string
 }
@@ -55,7 +55,7 @@ func (m *PercentageSlippageModel) Name() string {
 
 func (m *PercentageSlippageModel) CalculateSlippage(req order.OrderRequest, fillPrice float64, candle *market.Candle) (float64, error) {
 	slippage := fillPrice * m.Percentage
-	
+
 	// Apply in direction of order
 	if req.Side == order.OrderSideBuy {
 		return slippage, nil // Pay more
@@ -88,17 +88,17 @@ func (m *VolatilitySlippageModel) CalculateSlippage(req order.OrderRequest, fill
 	if candle == nil {
 		return 0, fmt.Errorf("candle required for volatility-based slippage")
 	}
-	
+
 	// Calculate price range as volatility proxy
 	priceRange := candle.High - candle.Low
 	if priceRange <= 0 {
 		// No volatility, use minimum slippage
 		return m.applyDirection(m.MinSlippage, req.Side), nil
 	}
-	
+
 	// Calculate slippage based on volatility
 	slippage := priceRange * m.VolatilityFactor
-	
+
 	// Clamp to [min, max]
 	if slippage < m.MinSlippage {
 		slippage = m.MinSlippage
@@ -106,7 +106,7 @@ func (m *VolatilitySlippageModel) CalculateSlippage(req order.OrderRequest, fill
 	if m.MaxSlippage > 0 && slippage > m.MaxSlippage {
 		slippage = m.MaxSlippage
 	}
-	
+
 	return m.applyDirection(slippage, req.Side), nil
 }
 
@@ -142,22 +142,22 @@ func (m *VolumeSlippageModel) CalculateSlippage(req order.OrderRequest, fillPric
 	if candle == nil {
 		return 0, fmt.Errorf("candle required for volume-based slippage")
 	}
-	
+
 	if candle.Volume <= 0 {
 		// No volume data, use minimum slippage
 		return m.applyDirection(m.MinSlippage, req.Side), nil
 	}
-	
+
 	// Calculate order size as fraction of volume
 	// Assuming req.Quantity is in base currency units
 	orderNotional := req.Quantity * fillPrice
 	volumeNotional := candle.Volume * fillPrice // Approximate
-	
+
 	volumeRatio := orderNotional / volumeNotional
-	
+
 	// Calculate slippage based on volume ratio
 	slippage := volumeRatio * m.ImpactFactor * fillPrice
-	
+
 	// Clamp to [min, max]
 	if slippage < m.MinSlippage {
 		slippage = m.MinSlippage
@@ -165,7 +165,7 @@ func (m *VolumeSlippageModel) CalculateSlippage(req order.OrderRequest, fillPric
 	if m.MaxSlippage > 0 && slippage > m.MaxSlippage {
 		slippage = m.MaxSlippage
 	}
-	
+
 	return m.applyDirection(slippage, req.Side), nil
 }
 

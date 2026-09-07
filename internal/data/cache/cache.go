@@ -14,39 +14,39 @@ import (
 type Cache interface {
 	// Get retrieves cached candles by key. Returns nil if not found.
 	Get(key string) []*market.Candle
-	
+
 	// Put stores candles in cache with the given key.
 	Put(key string, candles []*market.Candle)
-	
+
 	// Clear removes all entries from cache.
 	Clear()
-	
+
 	// Stats returns cache statistics.
 	Stats() CacheStats
 }
 
 // CacheStats holds cache statistics.
 type CacheStats struct {
-	Hits       int64
-	Misses     int64
-	Evictions  int64
-	Size       int
-	MaxSize    int
-	HitRate    float64
+	Hits      int64
+	Misses    int64
+	Evictions int64
+	Size      int
+	MaxSize   int
+	HitRate   float64
 }
 
 // LRUCache implements Cache with Least Recently Used eviction policy.
 type LRUCache struct {
 	maxSize int
 	mu      sync.RWMutex
-	
+
 	// entries maps key to cache entry
 	entries map[string]*cacheEntry
-	
+
 	// lru is a doubly-linked list for LRU tracking
 	head *cacheEntry
 	tail *cacheEntry
-	
+
 	// stats
 	hits      int64
 	misses    int64
@@ -68,7 +68,7 @@ func NewLRUCache(maxSize int) *LRUCache {
 	if maxSize <= 0 {
 		maxSize = 100 // Default
 	}
-	
+
 	return &LRUCache{
 		maxSize: maxSize,
 		entries: make(map[string]*cacheEntry),
@@ -79,18 +79,18 @@ func NewLRUCache(maxSize int) *LRUCache {
 func (c *LRUCache) Get(key string) []*market.Candle {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	entry, exists := c.entries[key]
 	if !exists {
 		c.misses++
 		return nil
 	}
-	
+
 	c.hits++
-	
+
 	// Move to front (most recently used)
 	c.moveToFront(entry)
-	
+
 	return entry.candles
 }
 
@@ -98,7 +98,7 @@ func (c *LRUCache) Get(key string) []*market.Candle {
 func (c *LRUCache) Put(key string, candles []*market.Candle) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Check if already exists
 	if entry, exists := c.entries[key]; exists {
 		// Update existing entry
@@ -107,17 +107,17 @@ func (c *LRUCache) Put(key string, candles []*market.Candle) {
 		c.moveToFront(entry)
 		return
 	}
-	
+
 	// Create new entry
 	entry := &cacheEntry{
 		key:      key,
 		candles:  candles,
 		cachedAt: time.Now(),
 	}
-	
+
 	c.entries[key] = entry
 	c.addToFront(entry)
-	
+
 	// Evict if over capacity
 	if len(c.entries) > c.maxSize {
 		c.evictLRU()
@@ -128,7 +128,7 @@ func (c *LRUCache) Put(key string, candles []*market.Candle) {
 func (c *LRUCache) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.entries = make(map[string]*cacheEntry)
 	c.head = nil
 	c.tail = nil
@@ -138,13 +138,13 @@ func (c *LRUCache) Clear() {
 func (c *LRUCache) Stats() CacheStats {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	total := c.hits + c.misses
 	hitRate := 0.0
 	if total > 0 {
 		hitRate = float64(c.hits) / float64(total)
 	}
-	
+
 	return CacheStats{
 		Hits:      c.hits,
 		Misses:    c.misses,
@@ -160,10 +160,10 @@ func (c *LRUCache) moveToFront(entry *cacheEntry) {
 	if entry == c.head {
 		return // Already at front
 	}
-	
+
 	// Remove from current position
 	c.removeFromList(entry)
-	
+
 	// Add to front
 	c.addToFront(entry)
 }
@@ -172,12 +172,12 @@ func (c *LRUCache) moveToFront(entry *cacheEntry) {
 func (c *LRUCache) addToFront(entry *cacheEntry) {
 	entry.next = c.head
 	entry.prev = nil
-	
+
 	if c.head != nil {
 		c.head.prev = entry
 	}
 	c.head = entry
-	
+
 	if c.tail == nil {
 		c.tail = entry
 	}
@@ -190,13 +190,13 @@ func (c *LRUCache) removeFromList(entry *cacheEntry) {
 	} else {
 		c.head = entry.next
 	}
-	
+
 	if entry.next != nil {
 		entry.next.prev = entry.prev
 	} else {
 		c.tail = entry.prev
 	}
-	
+
 	entry.prev = nil
 	entry.next = nil
 }
@@ -206,7 +206,7 @@ func (c *LRUCache) evictLRU() {
 	if c.tail == nil {
 		return
 	}
-	
+
 	// Remove tail (least recently used)
 	toEvict := c.tail
 	c.removeFromList(toEvict)
@@ -218,11 +218,11 @@ func (c *LRUCache) evictLRU() {
 func GenerateCacheKey(symbol, timeframe string, candles []*market.Candle) string {
 	// Include symbol and timeframe
 	key := fmt.Sprintf("%s:%s:", symbol, timeframe)
-	
+
 	// Add hash of candle data for uniqueness
 	hash := hashCandles(candles)
 	key += hash
-	
+
 	return key
 }
 
@@ -232,22 +232,22 @@ func hashCandles(candles []*market.Candle) string {
 	if len(candles) == 0 {
 		return "empty"
 	}
-	
+
 	h := sha256.New()
-	
+
 	// Include count
 	h.Write([]byte(fmt.Sprintf("count:%d", len(candles))))
-	
+
 	// Include first timestamp
 	if len(candles) > 0 {
 		h.Write([]byte(fmt.Sprintf("first:%d", candles[0].Timestamp.Unix())))
 	}
-	
+
 	// Include last timestamp
 	if len(candles) > 0 {
 		h.Write([]byte(fmt.Sprintf("last:%d", candles[len(candles)-1].Timestamp.Unix())))
 	}
-	
+
 	// Include first/last OHLC for additional uniqueness
 	if len(candles) > 0 {
 		c := candles[0]
@@ -257,7 +257,7 @@ func hashCandles(candles []*market.Candle) string {
 		c := candles[len(candles)-1]
 		h.Write([]byte(fmt.Sprintf("ohlc:%f:%f:%f:%f", c.Open, c.High, c.Low, c.Close)))
 	}
-	
+
 	return hex.EncodeToString(h.Sum(nil))[:16] // Use first 16 chars
 }
 

@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/ZulferDev/smallbt_go/internal/broker"
 	"github.com/ZulferDev/smallbt_go/internal/data/feed"
 	"github.com/ZulferDev/smallbt_go/internal/execution"
 	"github.com/ZulferDev/smallbt_go/internal/order"
 	"github.com/ZulferDev/smallbt_go/internal/portfolio"
+	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{

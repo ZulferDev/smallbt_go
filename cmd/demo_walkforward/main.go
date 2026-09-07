@@ -45,7 +45,7 @@ func main() {
 	fmt.Println("STABILITY ANALYSIS RESULTS")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	fmt.Printf("Total Windows:        %d\n", analysis.TotalWindows)
-	fmt.Printf("Profitable Windows:   %d (%.1f%%)\n", analysis.ProfitableWindows, 
+	fmt.Printf("Profitable Windows:   %d (%.1f%%)\n", analysis.ProfitableWindows,
 		float64(analysis.ProfitableWindows)/float64(analysis.TotalWindows)*100)
 	fmt.Printf("Consistency Score:    %.2f/100\n", analysis.ConsistencyScore)
 	fmt.Printf("Best Window:          #%d (%.2f%%)\n", analysis.BestWindow, analysis.BestWindowReturn*100)

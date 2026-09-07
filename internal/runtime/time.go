@@ -7,10 +7,10 @@ import "time"
 type TimeProvider interface {
 	// Now returns the current time
 	Now() time.Time
-	
+
 	// Sleep pauses execution for duration d
 	Sleep(d time.Duration)
-	
+
 	// After waits for duration d and then sends the current time on the returned channel
 	After(d time.Duration) <-chan time.Time
 }

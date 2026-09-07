@@ -58,10 +58,10 @@ func DefaultReportConfig() ReportConfig {
 type Report struct {
 	Config ReportConfig
 	Result *backtest.BacktestResult
-	
+
 	// Generated content
 	Content string
-	
+
 	// Generation metadata
 	GeneratedAt time.Time
 }
@@ -161,11 +161,11 @@ func (g *Generator) generateSummaryText(result *backtest.BacktestResult) string 
 	text += fmt.Sprintf("Strategy:       %s\n", result.StrategyName)
 	text += fmt.Sprintf("Symbol:         %s\n", result.Config.Symbol)
 	text += fmt.Sprintf("Timeframe:      %s\n", result.Config.Timeframe)
-	text += fmt.Sprintf("Period:         %s to %s\n", 
+	text += fmt.Sprintf("Period:         %s to %s\n",
 		result.Config.StartTime.Format("2006-01-02"),
 		result.Config.EndTime.Format("2006-01-02"))
 	text += fmt.Sprintf("Initial Cash:   $%.2f\n", result.Config.InitialCash)
-	
+
 	finalEquity := result.Config.InitialCash
 	if len(result.EquityCurve) > 0 {
 		finalEquity = result.EquityCurve[len(result.EquityCurve)-1].Equity
@@ -178,25 +178,25 @@ func (g *Generator) generateSummaryText(result *backtest.BacktestResult) string 
 func (g *Generator) generateMetricsText(metrics *analytics.Metrics) string {
 	text := "PERFORMANCE METRICS\n"
 	text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-	
+
 	text += "\nReturns:\n"
 	text += fmt.Sprintf("  Total Return:        %+.2f%%\n", metrics.TotalReturn*100)
 	text += fmt.Sprintf("  CAGR:                %+.2f%%\n", metrics.CAGR*100)
 	text += fmt.Sprintf("  Sharpe Ratio:        %.2f\n", metrics.SharpeRatio)
 	text += fmt.Sprintf("  Sortino Ratio:       %.2f\n", metrics.SortinoRatio)
-	
+
 	text += "\nRisk:\n"
 	text += fmt.Sprintf("  Max Drawdown:        %.2f%%\n", metrics.MaxDrawdown*100)
 	text += fmt.Sprintf("  Calmar Ratio:        %.2f\n", metrics.CalmarRatio)
 	text += fmt.Sprintf("  Avg Drawdown:        %.2f%%\n", metrics.AvgDrawdown*100)
-	
+
 	text += "\nTrades:\n"
 	text += fmt.Sprintf("  Win Rate:            %.2f%%\n", metrics.WinRate*100)
 	text += fmt.Sprintf("  Profit Factor:       %.2f\n", metrics.ProfitFactor)
 	text += fmt.Sprintf("  Average Trade:       $%.2f\n", metrics.AvgTrade)
 	text += fmt.Sprintf("  Average Win:         $%.2f\n", metrics.AvgWin)
 	text += fmt.Sprintf("  Average Loss:        $%.2f\n", metrics.AvgLoss)
-	
+
 	text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 	return text
 }
@@ -205,7 +205,7 @@ func (g *Generator) generateTradeHistorySummaryText(result *backtest.BacktestRes
 	text := "TRADE HISTORY\n"
 	text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 	text += fmt.Sprintf("Total Trades:        %d\n", result.TotalTrades)
-	
+
 	winning := 0
 	losing := 0
 	for _, trade := range result.TradeHistory {
@@ -215,17 +215,17 @@ func (g *Generator) generateTradeHistorySummaryText(result *backtest.BacktestRes
 			losing++
 		}
 	}
-	
+
 	text += fmt.Sprintf("Winning Trades:      %d\n", winning)
 	text += fmt.Sprintf("Losing Trades:       %d\n", losing)
-	
+
 	if len(result.TradeHistory) > 0 {
 		text += "\nRecent Trades (last 10):\n"
 		start := len(result.TradeHistory) - 10
 		if start < 0 {
 			start = 0
 		}
-		
+
 		for i := start; i < len(result.TradeHistory); i++ {
 			trade := result.TradeHistory[i]
 			text += fmt.Sprintf("  %s: %s → %s | PnL: $%.2f (%.2f%%)\n",
@@ -236,7 +236,7 @@ func (g *Generator) generateTradeHistorySummaryText(result *backtest.BacktestRes
 				trade.Return*100)
 		}
 	}
-	
+
 	text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
 	return text
 }

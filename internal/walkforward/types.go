@@ -99,14 +99,14 @@ type WFAggregateResult struct {
 	AverageTradeReturn float64
 
 	// In-sample vs out-of-sample comparison
-	InSampleAvgSharpe     float64
-	OutOfSampleAvgSharpe  float64
+	InSampleAvgSharpe      float64
+	OutOfSampleAvgSharpe   float64
 	SharpeRatioDegradation float64 // (in-sample - out-of-sample) / in-sample
 
 	// Window-level metrics
-	WindowCount         int
-	WindowResults       []WFWindowResult
-	OutOfSampleEquity   []backtest.EquityPoint
+	WindowCount       int
+	WindowResults     []WFWindowResult
+	OutOfSampleEquity []backtest.EquityPoint
 }
 
 // New creates a new WalkForwardAnalysis instance.
@@ -133,7 +133,7 @@ func (wfa *WalkForwardAnalysis) GenerateWindows(totalBars int) error {
 
 	for trainStart := 0; trainStart+wfa.Config.TrainBars+wfa.Config.TestBars <= totalBars; trainStart += wfa.Config.StepBars {
 		window := Window{
-			WindowID:  windowID,
+			WindowID:   windowID,
 			TrainStart: trainStart,
 			TrainEnd:   trainStart + wfa.Config.TrainBars - 1,
 			TestStart:  trainStart + wfa.Config.TrainBars,

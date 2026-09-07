@@ -104,13 +104,13 @@ func TestMarketData_AddCandle(t *testing.T) {
 
 func TestMarketData_GetLatest(t *testing.T) {
 	md := NewMarketData(Symbol("BTCUSDT"), Timeframe("1h"))
-	
+
 	// Test empty data
 	latest := md.GetLatest()
 	if latest != nil {
 		t.Error("GetLatest() on empty data should return nil")
 	}
-	
+
 	// Add one candle
 	candle1 := Candle{
 		Timestamp: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -121,7 +121,7 @@ func TestMarketData_GetLatest(t *testing.T) {
 		Volume:    1000,
 	}
 	md.AddCandle(candle1)
-	
+
 	latest = md.GetLatest()
 	if latest == nil {
 		t.Fatal("GetLatest() should return non-nil after adding candle")
@@ -129,7 +129,7 @@ func TestMarketData_GetLatest(t *testing.T) {
 	if latest.Close != 105 {
 		t.Errorf("GetLatest() Close = %f, want 105", latest.Close)
 	}
-	
+
 	// Add second candle (newer)
 	candle2 := Candle{
 		Timestamp: time.Date(2021, 1, 1, 1, 0, 0, 0, time.UTC),
@@ -140,7 +140,7 @@ func TestMarketData_GetLatest(t *testing.T) {
 		Volume:    1500,
 	}
 	md.AddCandle(candle2)
-	
+
 	latest = md.GetLatest()
 	if latest == nil {
 		t.Fatal("GetLatest() should return non-nil")

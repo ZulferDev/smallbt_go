@@ -54,7 +54,7 @@ func (e *TradeJournalExporter) ExportCSV(filepath string) error {
 		"ExitReason",
 		"PriceChange_%",
 	}
-	
+
 	if err := writer.Write(header); err != nil {
 		return fmt.Errorf("write header: %w", err)
 	}
@@ -63,11 +63,11 @@ func (e *TradeJournalExporter) ExportCSV(filepath string) error {
 	for _, trade := range e.trades {
 		duration := trade.ExitTime.Sub(trade.EntryTime).Minutes()
 		priceChange := ((trade.ExitPrice - trade.EntryPrice) / trade.EntryPrice) * 100
-		
+
 		// Calculate MAE/MFE as percentages
 		maePercent := (trade.MAE / trade.EntryPrice) * 100
 		mfePercent := (trade.MFE / trade.EntryPrice) * 100
-		
+
 		record := []string{
 			trade.ID,
 			string(trade.Symbol),
@@ -89,7 +89,7 @@ func (e *TradeJournalExporter) ExportCSV(filepath string) error {
 			trade.ExitReason,
 			fmt.Sprintf("%.4f", priceChange),
 		}
-		
+
 		if err := writer.Write(record); err != nil {
 			return fmt.Errorf("write record: %w", err)
 		}
@@ -100,35 +100,35 @@ func (e *TradeJournalExporter) ExportCSV(filepath string) error {
 
 // TradeAnalysis provides advanced trade statistics.
 type TradeAnalysis struct {
-	TotalTrades      int
-	WinningTrades    int
-	LosingTrades     int
-	BreakevenTrades  int
-	
+	TotalTrades     int
+	WinningTrades   int
+	LosingTrades    int
+	BreakevenTrades int
+
 	// Streaks
-	CurrentStreak    int
-	MaxWinStreak     int
-	MaxLossStreak    int
-	
+	CurrentStreak int
+	MaxWinStreak  int
+	MaxLossStreak int
+
 	// Best/Worst
-	BestTrade        *portfolio.Trade
-	WorstTrade       *portfolio.Trade
-	LargestWin       float64
-	LargestLoss      float64
-	
+	BestTrade   *portfolio.Trade
+	WorstTrade  *portfolio.Trade
+	LargestWin  float64
+	LargestLoss float64
+
 	// Holding periods
-	AvgHoldingTime   time.Duration
-	MinHoldingTime   time.Duration
-	MaxHoldingTime   time.Duration
-	
+	AvgHoldingTime time.Duration
+	MinHoldingTime time.Duration
+	MaxHoldingTime time.Duration
+
 	// MAE/MFE analysis
-	AvgMAE           float64
-	AvgMFE           float64
-	AvgMAEPercent    float64
-	AvgMFEPercent    float64
-	
+	AvgMAE        float64
+	AvgMFE        float64
+	AvgMAEPercent float64
+	AvgMFEPercent float64
+
 	// Exit reasons breakdown
-	ExitReasons      map[string]int
+	ExitReasons map[string]int
 }
 
 // AnalyzeTrades performs comprehensive trade analysis.
@@ -138,13 +138,13 @@ func AnalyzeTrades(trades []portfolio.Trade) *TradeAnalysis {
 			ExitReasons: make(map[string]int),
 		}
 	}
-	
+
 	analysis := &TradeAnalysis{
 		TotalTrades:    len(trades),
 		ExitReasons:    make(map[string]int),
 		MinHoldingTime: time.Duration(1<<63 - 1), // Max duration
 	}
-	
+
 	var (
 		totalHoldingTime time.Duration
 		totalMAE         float64
@@ -156,14 +156,14 @@ func AnalyzeTrades(trades []portfolio.Trade) *TradeAnalysis {
 		maxWinStreak     int
 		maxLossStreak    int
 	)
-	
+
 	for i := range trades {
 		trade := &trades[i]
-		
+
 		// Win/Loss/Breakeven
 		if trade.NetPnL > 0 {
 			analysis.WinningTrades++
-			
+
 			// Streak tracking
 			if lastWasWin {
 				currentStreak++
@@ -174,7 +174,7 @@ func AnalyzeTrades(trades []portfolio.Trade) *TradeAnalysis {
 			if currentStreak > maxWinStreak {
 				maxWinStreak = currentStreak
 			}
-			
+
 			// Best trade
 			if analysis.BestTrade == nil || trade.NetPnL > analysis.BestTrade.NetPnL {
 				analysis.BestTrade = trade
@@ -182,7 +182,7 @@ func AnalyzeTrades(trades []portfolio.Trade) *TradeAnalysis {
 			}
 		} else if trade.NetPnL < 0 {
 			analysis.LosingTrades++
-			
+
 			// Streak tracking
 			if !lastWasWin && i > 0 {
 				currentStreak++
@@ -193,7 +193,7 @@ func AnalyzeTrades(trades []portfolio.Trade) *TradeAnalysis {
 			if currentStreak > maxLossStreak {
 				maxLossStreak = currentStreak
 			}
-			
+
 			// Worst trade
 			if analysis.WorstTrade == nil || trade.NetPnL < analysis.WorstTrade.NetPnL {
 				analysis.WorstTrade = trade
@@ -202,7 +202,7 @@ func AnalyzeTrades(trades []portfolio.Trade) *TradeAnalysis {
 		} else {
 			analysis.BreakevenTrades++
 		}
-		
+
 		// Holding time
 		holdingTime := trade.ExitTime.Sub(trade.EntryTime)
 		totalHoldingTime += holdingTime
@@ -212,19 +212,19 @@ func AnalyzeTrades(trades []portfolio.Trade) *TradeAnalysis {
 		if holdingTime > analysis.MaxHoldingTime {
 			analysis.MaxHoldingTime = holdingTime
 		}
-		
+
 		// MAE/MFE
 		totalMAE += trade.MAE
 		totalMFE += trade.MFE
 		totalMAEPercent += (trade.MAE / trade.EntryPrice) * 100
 		totalMFEPercent += (trade.MFE / trade.EntryPrice) * 100
-		
+
 		// Exit reasons
 		if trade.ExitReason != "" {
 			analysis.ExitReasons[trade.ExitReason]++
 		}
 	}
-	
+
 	// Calculate averages
 	analysis.AvgHoldingTime = totalHoldingTime / time.Duration(len(trades))
 	analysis.AvgMAE = totalMAE / float64(len(trades))
@@ -234,7 +234,7 @@ func AnalyzeTrades(trades []portfolio.Trade) *TradeAnalysis {
 	analysis.MaxWinStreak = maxWinStreak
 	analysis.MaxLossStreak = maxLossStreak
 	analysis.CurrentStreak = currentStreak
-	
+
 	return analysis
 }
 
@@ -243,7 +243,7 @@ func FormatAnalysisReport(analysis *TradeAnalysis) string {
 	if analysis.TotalTrades == 0 {
 		return "No trades to analyze"
 	}
-	
+
 	report := fmt.Sprintf(`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TRADE ANALYSIS
@@ -286,14 +286,14 @@ Exit Reasons:
 		analysis.AvgMAEPercent,
 		analysis.AvgMFEPercent,
 	)
-	
+
 	for reason, count := range analysis.ExitReasons {
 		percent := float64(count) / float64(analysis.TotalTrades) * 100
 		report += fmt.Sprintf("├─ %s: %d (%.1f%%)\n", reason, count, percent)
 	}
-	
+
 	report += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-	
+
 	return report
 }
 

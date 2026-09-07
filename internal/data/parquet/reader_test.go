@@ -72,7 +72,7 @@ func TestNewParquetReader(t *testing.T) {
 	t.Run("invalid file format", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "invalid.parquet")
-		
+
 		// Create a non-Parquet file
 		if err := os.WriteFile(filePath, []byte("not a parquet file"), 0644); err != nil {
 			t.Fatalf("write invalid file: %v", err)
@@ -88,7 +88,7 @@ func TestNewParquetReader(t *testing.T) {
 func TestParquetReader_Read(t *testing.T) {
 	t.Run("read valid candles", func(t *testing.T) {
 		baseTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-		
+
 		expected := []CandleParquet{
 			{
 				Timestamp: baseTime.UnixMilli(),
@@ -134,27 +134,27 @@ func TestParquetReader_Read(t *testing.T) {
 
 		for i, candle := range candles {
 			if candle.Timestamp.UnixMilli() != expected[i].Timestamp {
-				t.Errorf("candle[%d] timestamp: expected %d, got %d", 
+				t.Errorf("candle[%d] timestamp: expected %d, got %d",
 					i, expected[i].Timestamp, candle.Timestamp.UnixMilli())
 			}
 			if candle.Open != expected[i].Open {
-				t.Errorf("candle[%d] open: expected %.2f, got %.2f", 
+				t.Errorf("candle[%d] open: expected %.2f, got %.2f",
 					i, expected[i].Open, candle.Open)
 			}
 			if candle.High != expected[i].High {
-				t.Errorf("candle[%d] high: expected %.2f, got %.2f", 
+				t.Errorf("candle[%d] high: expected %.2f, got %.2f",
 					i, expected[i].High, candle.High)
 			}
 			if candle.Low != expected[i].Low {
-				t.Errorf("candle[%d] low: expected %.2f, got %.2f", 
+				t.Errorf("candle[%d] low: expected %.2f, got %.2f",
 					i, expected[i].Low, candle.Low)
 			}
 			if candle.Close != expected[i].Close {
-				t.Errorf("candle[%d] close: expected %.2f, got %.2f", 
+				t.Errorf("candle[%d] close: expected %.2f, got %.2f",
 					i, expected[i].Close, candle.Close)
 			}
 			if candle.Volume != expected[i].Volume {
-				t.Errorf("candle[%d] volume: expected %.2f, got %.2f", 
+				t.Errorf("candle[%d] volume: expected %.2f, got %.2f",
 					i, expected[i].Volume, candle.Volume)
 			}
 		}
@@ -359,7 +359,7 @@ func TestParquetReader_Close(t *testing.T) {
 func TestCandleParquet_Conversions(t *testing.T) {
 	t.Run("ToMarketCandle", func(t *testing.T) {
 		baseTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
-		
+
 		parquetCandle := CandleParquet{
 			Timestamp: baseTime.UnixMilli(),
 			Open:      100.0,
@@ -399,7 +399,7 @@ func TestCandleParquet_Conversions(t *testing.T) {
 
 	t.Run("FromMarketCandle", func(t *testing.T) {
 		baseTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
-		
+
 		marketCandle := &market.Candle{
 			Timestamp: baseTime,
 			Open:      100.0,
@@ -439,7 +439,7 @@ func TestCandleParquet_Conversions(t *testing.T) {
 
 	t.Run("round trip conversion", func(t *testing.T) {
 		baseTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
-		
+
 		original := &market.Candle{
 			Timestamp: baseTime,
 			Open:      100.0,

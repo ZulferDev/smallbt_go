@@ -147,7 +147,7 @@ func TestCreateStreamingPipeline(t *testing.T) {
 	// Create temporary CSV file for testing
 	tmpDir := t.TempDir()
 	csvPath := filepath.Join(tmpDir, "test_data.csv")
-	
+
 	csvContent := `timestamp,open,high,low,close,volume
 2024-01-01T00:00:00Z,100,110,90,105,1000
 2024-01-01T01:00:00Z,105,115,95,110,1200
@@ -288,7 +288,7 @@ func TestCreateStreamingPipeline(t *testing.T) {
 func TestCreateStreamingPipelineWithTransforms(t *testing.T) {
 	tmpDir := t.TempDir()
 	csvPath := filepath.Join(tmpDir, "test_transforms.csv")
-	
+
 	csvContent := `timestamp,open,high,low,close,volume
 2024-01-01T00:00:00Z,100,110,90,105,1000
 2024-01-01T01:00:00Z,105,115,95,110,1200`
@@ -333,7 +333,7 @@ func TestCreateStreamingPipelineWithTransforms(t *testing.T) {
 
 // Helper function to check if string contains substring.
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
 }
 

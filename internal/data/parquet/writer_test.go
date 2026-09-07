@@ -351,7 +351,7 @@ func TestParquetWriter_RoundTrip(t *testing.T) {
 		filePath := filepath.Join(tmpDir, "large.parquet")
 
 		baseTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-		
+
 		// Create 1000 candles
 		candles := make([]*market.Candle, 1000)
 		for i := 0; i < 1000; i++ {

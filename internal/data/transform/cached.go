@@ -202,10 +202,10 @@ func (pc *PreloadCache) Stats() cache.CacheStats {
 
 // SmartCache automatically caches frequently accessed transforms.
 type SmartCache struct {
-	cache      *TransformCache
+	cache       *TransformCache
 	accessCount map[string]int
-	threshold  int
-	mu         sync.RWMutex
+	threshold   int
+	mu          sync.RWMutex
 }
 
 // NewSmartCache creates a smart cache with access threshold.

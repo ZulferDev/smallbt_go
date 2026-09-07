@@ -10,7 +10,7 @@ import (
 
 func createBenchCSV(b *testing.B, count int) string {
 	b.Helper()
-	
+
 	// Create temp CSV using testing.T wrapper
 	t := &testing.T{}
 	return createTestCSV(t, count)
@@ -39,7 +39,7 @@ func BenchmarkTransformedFeed_Next_100(b *testing.B) {
 			chain:     chain,
 			batchSize: 10,
 		}
-		
+
 		for j := 0; j < 100; j++ {
 			_, err := tfeed.Next()
 			if err != nil {
@@ -69,7 +69,7 @@ func BenchmarkTransformedFeed_Next_1K(b *testing.B) {
 			chain:     chain,
 			batchSize: 100,
 		}
-		
+
 		for j := 0; j < 1000; j++ {
 			_, err := tfeed.Next()
 			if err != nil {
@@ -205,14 +205,14 @@ func BenchmarkStatsTracker_1K(b *testing.B) {
 		feed, _ := csv.NewCSVDataFeed(csvPath, config)
 		tfeed, _ := NewTransformedFeed(feed, chain, 100)
 		tracker := NewStatsTracker(tfeed)
-		
+
 		for j := 0; j < 1000; j++ {
 			_, err := tracker.Next()
 			if err != nil {
 				break
 			}
 		}
-		
+
 		feed.Close()
 	}
 }

@@ -129,7 +129,7 @@ func TestTime_IsZero(t *testing.T) {
 	if !zero.IsZero() {
 		t.Error("Zero Time should report IsZero() = true")
 	}
-	
+
 	nonZero := Now()
 	if nonZero.IsZero() {
 		t.Error("Non-zero Time should report IsZero() = false")

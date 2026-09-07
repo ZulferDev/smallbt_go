@@ -12,7 +12,7 @@ import (
 func BenchmarkLRUCache_Put(b *testing.B) {
 	cache := NewLRUCache(1000)
 	candles := generateTestCandles(100)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		key := fmt.Sprintf("key-%d", i%1000)
@@ -24,12 +24,12 @@ func BenchmarkLRUCache_Put(b *testing.B) {
 func BenchmarkLRUCache_Get_Hit(b *testing.B) {
 	cache := NewLRUCache(1000)
 	candles := generateTestCandles(100)
-	
+
 	// Populate cache
 	for i := 0; i < 100; i++ {
 		cache.Put(fmt.Sprintf("key-%d", i), candles)
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cache.Get(fmt.Sprintf("key-%d", i%100))
@@ -39,7 +39,7 @@ func BenchmarkLRUCache_Get_Hit(b *testing.B) {
 // BenchmarkLRUCache_Get_Miss benchmarks cache miss operations
 func BenchmarkLRUCache_Get_Miss(b *testing.B) {
 	cache := NewLRUCache(1000)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cache.Get(fmt.Sprintf("nonexistent-%d", i))
@@ -50,12 +50,12 @@ func BenchmarkLRUCache_Get_Miss(b *testing.B) {
 func BenchmarkLRUCache_Mixed(b *testing.B) {
 	cache := NewLRUCache(1000)
 	candles := generateTestCandles(100)
-	
+
 	// Populate with some data
 	for i := 0; i < 100; i++ {
 		cache.Put(fmt.Sprintf("key-%d", i), candles)
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if i%3 == 0 {
@@ -72,7 +72,7 @@ func BenchmarkLRUCache_Mixed(b *testing.B) {
 func BenchmarkLRUCache_Eviction(b *testing.B) {
 	cache := NewLRUCache(100) // Small cache to trigger evictions
 	candles := generateTestCandles(100)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		key := fmt.Sprintf("key-%d", i)
@@ -83,7 +83,7 @@ func BenchmarkLRUCache_Eviction(b *testing.B) {
 // BenchmarkGenerateCacheKey benchmarks cache key generation
 func BenchmarkGenerateCacheKey(b *testing.B) {
 	candles := generateTestCandles(1000)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		GenerateCacheKey("BTC", "1h", candles)
@@ -93,7 +93,7 @@ func BenchmarkGenerateCacheKey(b *testing.B) {
 // BenchmarkGenerateCacheKey_Small benchmarks key generation with small dataset
 func BenchmarkGenerateCacheKey_Small(b *testing.B) {
 	candles := generateTestCandles(10)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		GenerateCacheKey("BTC", "1h", candles)
@@ -103,7 +103,7 @@ func BenchmarkGenerateCacheKey_Small(b *testing.B) {
 // BenchmarkGenerateCacheKey_Large benchmarks key generation with large dataset
 func BenchmarkGenerateCacheKey_Large(b *testing.B) {
 	candles := generateTestCandles(10000)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		GenerateCacheKey("BTC", "1h", candles)
@@ -113,7 +113,7 @@ func BenchmarkGenerateCacheKey_Large(b *testing.B) {
 // BenchmarkHashCandles benchmarks candle hashing
 func BenchmarkHashCandles(b *testing.B) {
 	candles := generateTestCandles(1000)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		hashCandles(candles)
@@ -124,7 +124,7 @@ func BenchmarkHashCandles(b *testing.B) {
 func BenchmarkLRUCache_LargeDataset(b *testing.B) {
 	cache := NewLRUCache(100)
 	candles := generateTestCandles(10000) // 10K candles
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		key := fmt.Sprintf("key-%d", i%100)
@@ -136,13 +136,13 @@ func BenchmarkLRUCache_LargeDataset(b *testing.B) {
 func BenchmarkLRUCache_Stats(b *testing.B) {
 	cache := NewLRUCache(1000)
 	candles := generateTestCandles(100)
-	
+
 	// Populate cache
 	for i := 0; i < 100; i++ {
 		cache.Put(fmt.Sprintf("key-%d", i), candles)
 		cache.Get(fmt.Sprintf("key-%d", i))
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		cache.Stats()
@@ -153,7 +153,7 @@ func BenchmarkLRUCache_Stats(b *testing.B) {
 func BenchmarkNoOpCache(b *testing.B) {
 	cache := NewNoOpCache()
 	candles := generateTestCandles(100)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		key := fmt.Sprintf("key-%d", i)

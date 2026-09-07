@@ -175,9 +175,9 @@ func NotCondition(condition Condition) Condition {
 
 // SwitchTransform applies different transforms based on conditions.
 type SwitchTransform struct {
-	cases         []switchCase
-	defaultCase   Transform
-	config        TransformConfig
+	cases       []switchCase
+	defaultCase Transform
+	config      TransformConfig
 }
 
 type switchCase struct {
@@ -231,7 +231,7 @@ func (st *SwitchTransform) Apply(candles []*market.Candle) ([]*market.Candle, er
 
 	// Apply transforms to each group
 	result := CopyCandles(candles)
-	
+
 	for caseIdx, group := range groups {
 		if len(group) == 0 {
 			continue

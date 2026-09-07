@@ -55,16 +55,16 @@ func BenchmarkAligner_TenSymbols(b *testing.B) {
 	candles := generateCandles(1000, time.Minute)
 
 	input := map[string][]*market.Candle{
-		"BTC":  candles,
-		"ETH":  candles,
-		"BNB":  candles,
-		"SOL":  candles,
-		"DOGE": candles,
-		"ADA":  candles,
-		"XRP":  candles,
-		"DOT":  candles,
+		"BTC":   candles,
+		"ETH":   candles,
+		"BNB":   candles,
+		"SOL":   candles,
+		"DOGE":  candles,
+		"ADA":   candles,
+		"XRP":   candles,
+		"DOT":   candles,
 		"MATIC": candles,
-		"AVAX": candles,
+		"AVAX":  candles,
 	}
 
 	b.ResetTimer()

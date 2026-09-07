@@ -101,18 +101,18 @@ func TestPhase8_AllMetrics(t *testing.T) {
 
 	// Required metrics from AGENTS.md Phase 8
 	requiredMetrics := map[string]func() float64{
-		"Total Return":   func() float64 { return result.Metrics.TotalReturn },
-		"CAGR":           func() float64 { return result.Metrics.CAGR },
-		"Sharpe Ratio":   func() float64 { return result.Metrics.SharpeRatio },
-		"Sortino Ratio":  func() float64 { return result.Metrics.SortinoRatio },
-		"Calmar Ratio":   func() float64 { return result.Metrics.CalmarRatio },
-		"Max Drawdown":   func() float64 { return result.Metrics.MaxDrawdown },
-		"Win Rate":       func() float64 { return result.Metrics.WinRate },
-		"Profit Factor":  func() float64 { return result.Metrics.ProfitFactor },
-		"Expectancy":     func() float64 { return result.Metrics.Expectancy },
-		"Average Trade":  func() float64 { return result.Metrics.AvgTrade },
-		"Average Win":    func() float64 { return result.Metrics.AvgWin },
-		"Average Loss":   func() float64 { return result.Metrics.AvgLoss },
+		"Total Return":  func() float64 { return result.Metrics.TotalReturn },
+		"CAGR":          func() float64 { return result.Metrics.CAGR },
+		"Sharpe Ratio":  func() float64 { return result.Metrics.SharpeRatio },
+		"Sortino Ratio": func() float64 { return result.Metrics.SortinoRatio },
+		"Calmar Ratio":  func() float64 { return result.Metrics.CalmarRatio },
+		"Max Drawdown":  func() float64 { return result.Metrics.MaxDrawdown },
+		"Win Rate":      func() float64 { return result.Metrics.WinRate },
+		"Profit Factor": func() float64 { return result.Metrics.ProfitFactor },
+		"Expectancy":    func() float64 { return result.Metrics.Expectancy },
+		"Average Trade": func() float64 { return result.Metrics.AvgTrade },
+		"Average Win":   func() float64 { return result.Metrics.AvgWin },
+		"Average Loss":  func() float64 { return result.Metrics.AvgLoss },
 	}
 
 	for name, getter := range requiredMetrics {
@@ -218,7 +218,7 @@ func TestPhase8_CSVExport(t *testing.T) {
 	reader2 := csv.NewReader(f2)
 	tradeRecords, err := reader2.ReadAll()
 	require.NoError(t, err, "Should be able to read trades CSV")
-	
+
 	if len(result.TradeHistory) > 0 {
 		require.Greater(t, len(tradeRecords), 1, "Trades CSV should have header + data rows")
 		t.Logf("✓ Trade history CSV: %d rows", len(tradeRecords)-1)
@@ -285,16 +285,16 @@ func TestPhase8_PerformanceMetrics(t *testing.T) {
 	assert.Equal(t, 2, metrics.WinningTrades, "Should have 2 winning trades")
 	assert.Equal(t, 1, metrics.LosingTrades, "Should have 1 losing trade")
 	assert.InDelta(t, 2.0/3.0, metrics.WinRate, 0.01, "Win rate should be ~66.67%")
-	
+
 	expectedGrossProfit := 9.9 + 14.9
 	assert.InDelta(t, expectedGrossProfit, metrics.GrossProfit, 0.01, "Gross profit")
-	
+
 	expectedGrossLoss := -5.1
 	assert.InDelta(t, expectedGrossLoss, metrics.GrossLoss, 0.01, "Gross loss")
-	
+
 	expectedProfitFactor := expectedGrossProfit / math.Abs(expectedGrossLoss)
 	assert.InDelta(t, expectedProfitFactor, metrics.ProfitFactor, 0.01, "Profit factor")
-	
+
 	expectedAvgTrade := (9.9 - 5.1 + 14.9) / 3
 	assert.InDelta(t, expectedAvgTrade, metrics.AvgTrade, 0.01, "Average trade")
 
@@ -312,9 +312,9 @@ func TestPhase8_DrawdownCalculation(t *testing.T) {
 		{Timestamp: now, Equity: 10000, Drawdown: 0},
 		{Timestamp: now.Add(1 * time.Hour), Equity: 10500, Drawdown: 0},
 		{Timestamp: now.Add(2 * time.Hour), Equity: 10200, Drawdown: -0.0286}, // -2.86% from peak 10500
-		{Timestamp: now.Add(3 * time.Hour), Equity: 9800, Drawdown: -0.0667},   // -6.67% from peak 10500
+		{Timestamp: now.Add(3 * time.Hour), Equity: 9800, Drawdown: -0.0667},  // -6.67% from peak 10500
 		{Timestamp: now.Add(4 * time.Hour), Equity: 10100, Drawdown: -0.0381}, // -3.81% from peak 10500
-		{Timestamp: now.Add(5 * time.Hour), Equity: 10600, Drawdown: 0},        // New peak
+		{Timestamp: now.Add(5 * time.Hour), Equity: 10600, Drawdown: 0},       // New peak
 		{Timestamp: now.Add(6 * time.Hour), Equity: 10400, Drawdown: -0.0189}, // -1.89% from new peak 10600
 	}
 
@@ -324,11 +324,11 @@ func TestPhase8_DrawdownCalculation(t *testing.T) {
 	}
 
 	input := analytics.AnalysisInput{
-		StartTime:   now,
-		EndTime:     now.Add(6 * time.Hour),
-		InitialCash: 10000,
-		FinalEquity: 10400,
-		EquityCurve: equityCurve,
+		StartTime:    now,
+		EndTime:      now.Add(6 * time.Hour),
+		InitialCash:  10000,
+		FinalEquity:  10400,
+		EquityCurve:  equityCurve,
 		TradeHistory: trades,
 	}
 
@@ -445,18 +445,18 @@ execution:
 		},
 		TradeHistory: []portfolio.Trade{
 			{
-				Symbol:      "BTCUSDT",
-				Side:        "long",
-				EntryTime:   time.Date(2024, 1, 1, 4, 0, 0, 0, time.UTC),
-				EntryPrice:  45600,
-				ExitTime:    time.Date(2024, 1, 1, 8, 0, 0, 0, time.UTC),
-				ExitPrice:   45800,
-				Quantity:    0.1,
-				GrossPnL:    20,
-				Fees:        0.5,
-				NetPnL:      19.5,
-				Return:      0.0043,
-				ExitReason:  "signal",
+				Symbol:     "BTCUSDT",
+				Side:       "long",
+				EntryTime:  time.Date(2024, 1, 1, 4, 0, 0, 0, time.UTC),
+				EntryPrice: 45600,
+				ExitTime:   time.Date(2024, 1, 1, 8, 0, 0, 0, time.UTC),
+				ExitPrice:  45800,
+				Quantity:   0.1,
+				GrossPnL:   20,
+				Fees:       0.5,
+				NetPnL:     19.5,
+				Return:     0.0043,
+				ExitReason: "signal",
 			},
 		},
 		EquityCurve: []backtest.EquityPoint{

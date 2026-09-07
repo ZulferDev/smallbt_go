@@ -82,14 +82,14 @@ type Gap struct {
 
 // ValidationReport contains the results of data validation.
 type ValidationReport struct {
-	Valid            bool
-	TotalCandles     int
-	ValidCandles     int
-	Errors           []ValidationError
-	Warnings         []ValidationWarning
-	Gaps             []Gap
-	DuplicatesFound  int
-	Summary          string
+	Valid           bool
+	TotalCandles    int
+	ValidCandles    int
+	Errors          []ValidationError
+	Warnings        []ValidationWarning
+	Gaps            []Gap
+	DuplicatesFound int
+	Summary         string
 }
 
 // HasErrors returns true if the report contains any errors.

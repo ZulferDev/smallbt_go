@@ -34,7 +34,7 @@ func (g *Generator) generateHTML(result *backtest.BacktestResult) (string, error
 
 	// Header
 	html.WriteString(fmt.Sprintf("    <h1>%s</h1>\n", g.config.Title))
-	html.WriteString(fmt.Sprintf("    <p class=\"generated\">Generated: %s</p>\n", 
+	html.WriteString(fmt.Sprintf("    <p class=\"generated\">Generated: %s</p>\n",
 		time.Now().Format("2006-01-02 15:04:05")))
 	html.WriteString("    <hr>\n")
 
@@ -102,7 +102,7 @@ func (g *Generator) generateMetricsHTML(metrics *analytics.Metrics) string {
 	if metrics.TotalReturn < 0 {
 		returnClass = "negative"
 	}
-	html.WriteString(fmt.Sprintf("        <tr><td>Total Return</td><td class=\"%s\">%+.2f%%</td></tr>\n", 
+	html.WriteString(fmt.Sprintf("        <tr><td>Total Return</td><td class=\"%s\">%+.2f%%</td></tr>\n",
 		returnClass, metrics.TotalReturn*100))
 	html.WriteString(fmt.Sprintf("        <tr><td>CAGR</td><td>%+.2f%%</td></tr>\n", metrics.CAGR*100))
 	html.WriteString(fmt.Sprintf("        <tr><td>Sharpe Ratio</td><td>%.2f</td></tr>\n", metrics.SharpeRatio))
@@ -113,7 +113,7 @@ func (g *Generator) generateMetricsHTML(metrics *analytics.Metrics) string {
 	html.WriteString("      <h3>Risk Metrics</h3>\n")
 	html.WriteString("      <table>\n")
 	html.WriteString("        <tr><th>Metric</th><th>Value</th></tr>\n")
-	html.WriteString(fmt.Sprintf("        <tr><td>Max Drawdown</td><td class=\"negative\">%.2f%%</td></tr>\n", 
+	html.WriteString(fmt.Sprintf("        <tr><td>Max Drawdown</td><td class=\"negative\">%.2f%%</td></tr>\n",
 		metrics.MaxDrawdown*100))
 	html.WriteString(fmt.Sprintf("        <tr><td>Calmar Ratio</td><td>%.2f</td></tr>\n", metrics.CalmarRatio))
 	html.WriteString(fmt.Sprintf("        <tr><td>Avg Drawdown</td><td>%.2f%%</td></tr>\n", metrics.AvgDrawdown*100))

@@ -195,10 +195,10 @@ func TestStabilityAnalysis_EmptyResults(t *testing.T) {
 
 func TestPerformanceDegradationClassification(t *testing.T) {
 	tests := []struct {
-		name           string
-		trainReturn    float64
-		testReturn     float64
-		expectedDegr   string
+		name         string
+		trainReturn  float64
+		testReturn   float64
+		expectedDegr string
 	}{
 		{"Improved", 0.10, 0.15, "Improved"},
 		{"Stable", 0.10, 0.095, "Low"},
@@ -266,10 +266,10 @@ func TestExportMultipleWindows(t *testing.T) {
 	wfa := &WalkForwardAnalysis{
 		Results: make(map[int]*WFWindowResult),
 		AggregateResult: &WFAggregateResult{
-			TotalTrades:  100,
-			TotalReturn:  0.25,
-			SharpeRatio:  1.5,
-			MaxDrawdown:  0.15,
+			TotalTrades: 100,
+			TotalReturn: 0.25,
+			SharpeRatio: 1.5,
+			MaxDrawdown: 0.15,
 		},
 	}
 
@@ -292,10 +292,10 @@ func TestExportMultipleWindows(t *testing.T) {
 			TestResult: &backtest.BacktestResult{
 				TotalTrades: 10,
 				Metrics: &analytics.Metrics{
-					TotalReturn: testReturn,
-					SharpeRatio: 1.5,
-					MaxDrawdown: 0.1,
-					WinRate:     0.6,
+					TotalReturn:  testReturn,
+					SharpeRatio:  1.5,
+					MaxDrawdown:  0.1,
+					WinRate:      0.6,
 					ProfitFactor: 1.8,
 				},
 			},
@@ -336,18 +336,18 @@ func createMockWalkForwardAnalysis() *WalkForwardAnalysis {
 		},
 		Results: make(map[int]*WFWindowResult),
 		AggregateResult: &WFAggregateResult{
-			TotalTrades:  125,
-			TotalReturn:  0.18,
-			CAGR:         0.15,
-			SharpeRatio:  1.45,
-			SortinoRatio: 1.85,
-			MaxDrawdown:  0.12,
-			CalmarRatio:  1.25,
-			WinRate:      0.58,
-			ProfitFactor: 1.75,
-			Expectancy:   0.025,
-			AverageWin:   125.50,
-			AverageLoss:  -78.25,
+			TotalTrades:        125,
+			TotalReturn:        0.18,
+			CAGR:               0.15,
+			SharpeRatio:        1.45,
+			SortinoRatio:       1.85,
+			MaxDrawdown:        0.12,
+			CalmarRatio:        1.25,
+			WinRate:            0.58,
+			ProfitFactor:       1.75,
+			Expectancy:         0.025,
+			AverageWin:         125.50,
+			AverageLoss:        -78.25,
 			AverageTradeReturn: 0.015,
 		},
 	}

@@ -31,11 +31,11 @@ func NewBufferedCSVReader(path string, csvConfig csv.CSVConfig, bufConfig Buffer
 	}
 
 	return &BufferedCSVReader{
-		feed:      feed,
-		config:    bufConfig,
-		buffer:    make([]*market.Candle, 0, bufConfig.ChunkSize),
-		loaded:    false,
-		closed:    false,
+		feed:   feed,
+		config: bufConfig,
+		buffer: make([]*market.Candle, 0, bufConfig.ChunkSize),
+		loaded: false,
+		closed: false,
 	}, nil
 }
 
@@ -146,12 +146,12 @@ func (r *BufferedCSVReader) Reset() error {
 	}
 
 	r.dataIndex = 0
-	
+
 	// Reset feed position if supported
 	if r.feed != nil {
 		r.feed.Reset()
 	}
-	
+
 	return nil
 }
 
@@ -185,10 +185,10 @@ func (r *BufferedCSVReader) loadAll() error {
 // Stats returns statistics about the buffered reader.
 func (r *BufferedCSVReader) Stats() BufferedReaderStats {
 	return BufferedReaderStats{
-		TotalCandles:  len(r.allData),
-		CurrentIndex:  r.dataIndex,
-		ChunkSize:     r.config.ChunkSize,
-		ChunksRead:    r.dataIndex / r.config.ChunkSize,
-		MemoryUsedMB:  float64(len(r.allData)*sizeOfCandle) / 1024 / 1024,
+		TotalCandles: len(r.allData),
+		CurrentIndex: r.dataIndex,
+		ChunkSize:    r.config.ChunkSize,
+		ChunksRead:   r.dataIndex / r.config.ChunkSize,
+		MemoryUsedMB: float64(len(r.allData)*sizeOfCandle) / 1024 / 1024,
 	}
 }

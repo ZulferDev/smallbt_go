@@ -77,7 +77,7 @@ func main() {
 	fmt.Printf("95th Percentile:      %.2f%%\n", stats.P95Return*100)
 	fmt.Printf("Mean Max Drawdown:    %.2f%%\n", stats.MeanMaxDrawdown*100)
 	fmt.Printf("95th Pctl Drawdown:   %.2f%%\n", stats.P95MaxDrawdown*100)
-	fmt.Printf("Negative Returns:     %d (%.1f%%)\n", stats.NegativeReturnCount, 
+	fmt.Printf("Negative Returns:     %d (%.1f%%)\n", stats.NegativeReturnCount,
 		stats.NegativeReturnRatio*100)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 

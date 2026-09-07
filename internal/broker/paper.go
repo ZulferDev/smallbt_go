@@ -20,9 +20,9 @@ type PaperBroker struct {
 	portfolio    *portfolio.Portfolio
 
 	// Paper-specific components
-	orderQueue  *OrderQueue
-	latencySim  *LatencySimulator
-	lastPrices  map[string]float64
+	orderQueue *OrderQueue
+	latencySim *LatencySimulator
+	lastPrices map[string]float64
 
 	// Background processing
 	ticker    *time.Ticker

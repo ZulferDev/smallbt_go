@@ -123,36 +123,36 @@ func TestConfig_Validate(t *testing.T) {
 
 func TestConfig_ModeChecks(t *testing.T) {
 	tests := []struct {
-		name         string
-		mode         ExecutionMode
-		isBacktest   bool
-		isPaper      bool
-		isLive       bool
-		isRealTime   bool
+		name       string
+		mode       ExecutionMode
+		isBacktest bool
+		isPaper    bool
+		isLive     bool
+		isRealTime bool
 	}{
 		{
-			name:         "backtest mode",
-			mode:         ModeBacktest,
-			isBacktest:   true,
-			isPaper:      false,
-			isLive:       false,
-			isRealTime:   false,
+			name:       "backtest mode",
+			mode:       ModeBacktest,
+			isBacktest: true,
+			isPaper:    false,
+			isLive:     false,
+			isRealTime: false,
 		},
 		{
-			name:         "paper mode",
-			mode:         ModePaper,
-			isBacktest:   false,
-			isPaper:      true,
-			isLive:       false,
-			isRealTime:   true,
+			name:       "paper mode",
+			mode:       ModePaper,
+			isBacktest: false,
+			isPaper:    true,
+			isLive:     false,
+			isRealTime: true,
 		},
 		{
-			name:         "live mode",
-			mode:         ModeLive,
-			isBacktest:   false,
-			isPaper:      false,
-			isLive:       true,
-			isRealTime:   true,
+			name:       "live mode",
+			mode:       ModeLive,
+			isBacktest: false,
+			isPaper:    false,
+			isLive:     true,
+			isRealTime: true,
 		},
 	}
 

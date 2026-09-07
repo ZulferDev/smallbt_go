@@ -418,13 +418,13 @@ func TestRealWorldAnalyzer(t *testing.T) {
 
 	input := AnalysisInput{
 		TradeHistory: []portfolio.Trade{
-			{NetPnL: 100},  // Win
-			{NetPnL: 50},   // Win
-			{NetPnL: -20},  // Loss
-			{NetPnL: 30},   // Win
-			{NetPnL: 40},   // Win
-			{NetPnL: 25},   // Win (max streak = 3)
-			{NetPnL: -10},  // Loss
+			{NetPnL: 100}, // Win
+			{NetPnL: 50},  // Win
+			{NetPnL: -20}, // Loss
+			{NetPnL: 30},  // Win
+			{NetPnL: 40},  // Win
+			{NetPnL: 25},  // Win (max streak = 3)
+			{NetPnL: -10}, // Loss
 		},
 	}
 

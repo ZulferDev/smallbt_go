@@ -34,7 +34,7 @@ func NewSimpleExecutor(config Config) *SimpleExecutor {
 		config: config,
 		rng:    rand.New(rand.NewSource(config.Seed)),
 	}
-	
+
 	// Use provided SlippageModel if set, otherwise create from legacy config
 	if config.SlippageModel != nil {
 		executor.slippageModel = config.SlippageModel
@@ -51,7 +51,7 @@ func NewSimpleExecutor(config Config) *SimpleExecutor {
 			executor.slippageModel = NewNoSlippageModel()
 		}
 	}
-	
+
 	return executor
 }
 
@@ -212,14 +212,14 @@ func (e *SimpleExecutor) calculateSlippage(req order.OrderRequest, fillPrice flo
 	if e.slippageModel == nil {
 		return 0
 	}
-	
+
 	// Use the slippage model with current candle context
 	slippage, err := e.slippageModel.CalculateSlippage(req, fillPrice, e.lastCandle)
 	if err != nil {
 		// If error, fall back to no slippage
 		return 0
 	}
-	
+
 	return slippage
 }
 
