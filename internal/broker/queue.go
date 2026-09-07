@@ -59,6 +59,7 @@ func (q *OrderQueue) Add(order *order.Order, submitTime, acceptTime time.Time) {
 }
 
 // GetPendingOrders returns orders that are pending and past their accept time
+// Returns copies to avoid race conditions
 func (q *OrderQueue) GetPendingOrders(now time.Time) []*QueuedOrder {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
@@ -66,13 +67,16 @@ func (q *OrderQueue) GetPendingOrders(now time.Time) []*QueuedOrder {
 	var pending []*QueuedOrder
 	for _, qo := range q.orders {
 		if qo.Status == StatusPending && !now.Before(qo.AcceptTime) {
-			pending = append(pending, qo)
+			// Create a copy to avoid race conditions when accessed outside lock
+			qoCopy := *qo
+			pending = append(pending, &qoCopy)
 		}
 	}
 	return pending
 }
 
 // GetAcceptedOrders returns all accepted orders waiting for fill
+// Returns copies to avoid race conditions
 func (q *OrderQueue) GetAcceptedOrders() []*QueuedOrder {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
@@ -80,7 +84,9 @@ func (q *OrderQueue) GetAcceptedOrders() []*QueuedOrder {
 	var accepted []*QueuedOrder
 	for _, qo := range q.orders {
 		if qo.Status == StatusAccepted {
-			accepted = append(accepted, qo)
+			// Create a copy to avoid race conditions when accessed outside lock
+			qoCopy := *qo
+			accepted = append(accepted, &qoCopy)
 		}
 	}
 	return accepted

@@ -427,6 +427,13 @@ func runBacktest(args []string) error {
 			return fmt.Errorf("write JSON file: %w", err)
 		}
 		fmt.Printf("Results saved to %s\n", *outputJSON)
+		
+		// Auto-generate CSV trade history from JSON output path
+		csvPath := strings.TrimSuffix(*outputJSON, ".json") + ".csv"
+		if err := exportTradesToCSV(result.TradeHistory, csvPath); err != nil {
+			return fmt.Errorf("write CSV file: %w", err)
+		}
+		fmt.Printf("Trade history saved to %s\n", csvPath)
 	}
 
 	// Write memory profile if requested
@@ -1372,4 +1379,38 @@ func runAnalyzeTrades(args []string) error {
 	}
 	
 	return nil
+}
+
+// exportTradesToCSV exports trade history to CSV format
+func exportTradesToCSV(trades []portfolio.Trade, filename string) error {
+	if len(trades) == 0 {
+		// Create empty CSV with header
+		return os.WriteFile(filename, []byte("timestamp,symbol,side,entry_time,exit_time,entry_price,exit_price,quantity,gross_pnl,fees,net_pnl,return,mae,mfe,duration_hours\n"), 0644)
+	}
+	
+	var buf strings.Builder
+	buf.WriteString("timestamp,symbol,side,entry_time,exit_time,entry_price,exit_price,quantity,gross_pnl,fees,net_pnl,return,mae,mfe,duration_hours\n")
+	
+	for _, trade := range trades {
+		duration := trade.ExitTime.Sub(trade.EntryTime).Hours()
+		buf.WriteString(fmt.Sprintf("%s,%s,%s,%s,%s,%.8f,%.8f,%.8f,%.2f,%.2f,%.2f,%.6f,%.2f,%.2f,%.2f\n",
+			trade.ExitTime.Format(time.RFC3339),
+			trade.Symbol,
+			trade.Side,
+			trade.EntryTime.Format(time.RFC3339),
+			trade.ExitTime.Format(time.RFC3339),
+			trade.EntryPrice,
+			trade.ExitPrice,
+			trade.Quantity,
+			trade.GrossPnL,
+			trade.Fees,
+			trade.NetPnL,
+			trade.Return,
+			trade.MAE,
+			trade.MFE,
+			duration,
+		))
+	}
+	
+	return os.WriteFile(filename, []byte(buf.String()), 0644)
 }
