@@ -440,13 +440,11 @@ func (e *Evaluator) updateCandleStateless(candle market.Candle) error {
 		}
 	}
 
-
 	// Topologically sort composite indicators based on dependencies
 	sortedCompositeNames, err := e.topologicalSortCompositeIndicators(compositeNames)
 	if err != nil {
 		return fmt.Errorf("sort composite indicators: %w", err)
 	}
-
 
 	for _, name := range sortedCompositeNames {
 		ind := e.indicators[name]
