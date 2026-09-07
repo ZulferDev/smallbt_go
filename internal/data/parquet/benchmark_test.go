@@ -75,7 +75,7 @@ func BenchmarkParquetReader_Read(b *testing.B) {
 			if err != nil {
 				b.Fatalf("NewParquetWriter failed: %v", err)
 			}
-			writer.Write(candles)
+			_ = writer.Write(candles)
 			writer.Close()
 
 			// Benchmark reading

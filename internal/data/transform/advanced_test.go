@@ -55,7 +55,7 @@ func TestMultiSymbolTransformedFeed_AddDuplicate(t *testing.T) {
 	msf := NewMultiSymbolTransformedFeed()
 	chain := NewTransformChain(NewScaleTransform(2.0, "close"))
 
-	msf.AddSymbol("BTC", feed1, chain, 5)
+	_ = msf.AddSymbol("BTC", feed1, chain, 5)
 	err := msf.AddSymbol("BTC", feed2, chain, 5)
 
 	if err == nil {
@@ -70,7 +70,7 @@ func TestMultiSymbolTransformedFeed_Next(t *testing.T) {
 
 	msf := NewMultiSymbolTransformedFeed()
 	chain := NewTransformChain(NewScaleTransform(2.0, "close"))
-	msf.AddSymbol("BTC", feed, chain, 10)
+	_ = msf.AddSymbol("BTC", feed, chain, 10)
 
 	candle, err := msf.Next("BTC")
 	if err != nil {
@@ -90,7 +90,7 @@ func TestMultiSymbolTransformedFeed_ReadAll(t *testing.T) {
 
 	msf := NewMultiSymbolTransformedFeed()
 	chain := NewTransformChain(NewNormalizeTransform("close"))
-	msf.AddSymbol("BTC", feed, chain, 10)
+	_ = msf.AddSymbol("BTC", feed, chain, 10)
 
 	candles, err := msf.ReadAll("BTC")
 	if err != nil {

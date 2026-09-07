@@ -102,7 +102,7 @@ func TestUnregister(t *testing.T) {
 	r := NewRegistry()
 	analyzer := &mockAnalyzer{name: "test", result: 1.0}
 
-	r.Register(analyzer)
+	_ = r.Register(analyzer)
 	if !r.Has("test") {
 		t.Fatal("Analyzer not registered")
 	}
@@ -124,7 +124,7 @@ func TestUnregisterNonExistent(t *testing.T) {
 func TestGet(t *testing.T) {
 	r := NewRegistry()
 	analyzer := &mockAnalyzer{name: "test", result: 99.0}
-	r.Register(analyzer)
+	_ = r.Register(analyzer)
 
 	retrieved := r.Get("test")
 	if retrieved == nil {
@@ -148,7 +148,7 @@ func TestGetNonExistent(t *testing.T) {
 func TestHas(t *testing.T) {
 	r := NewRegistry()
 	analyzer := &mockAnalyzer{name: "exists", result: 1.0}
-	r.Register(analyzer)
+	_ = r.Register(analyzer)
 
 	if !r.Has("exists") {
 		t.Fatal("Has returned false for existing analyzer")
@@ -169,9 +169,9 @@ func TestList(t *testing.T) {
 	}
 
 	// Register multiple analyzers
-	r.Register(&mockAnalyzer{name: "analyzer1", result: 1.0})
-	r.Register(&mockAnalyzer{name: "analyzer2", result: 2.0})
-	r.Register(&mockAnalyzer{name: "analyzer3", result: 3.0})
+	_ = r.Register(&mockAnalyzer{name: "analyzer1", result: 1.0})
+	_ = r.Register(&mockAnalyzer{name: "analyzer2", result: 2.0})
+	_ = r.Register(&mockAnalyzer{name: "analyzer3", result: 3.0})
 
 	names = r.List()
 	if len(names) != 3 {
@@ -191,8 +191,8 @@ func TestList(t *testing.T) {
 // TestClear tests clearing all analyzers.
 func TestClear(t *testing.T) {
 	r := NewRegistry()
-	r.Register(&mockAnalyzer{name: "analyzer1", result: 1.0})
-	r.Register(&mockAnalyzer{name: "analyzer2", result: 2.0})
+	_ = r.Register(&mockAnalyzer{name: "analyzer1", result: 1.0})
+	_ = r.Register(&mockAnalyzer{name: "analyzer2", result: 2.0})
 
 	if len(r.List()) != 2 {
 		t.Fatal("Expected 2 analyzers before clear")
@@ -209,7 +209,7 @@ func TestClear(t *testing.T) {
 func TestCalculate(t *testing.T) {
 	r := NewRegistry()
 	analyzer := &mockAnalyzer{name: "test", result: 123.45}
-	r.Register(analyzer)
+	_ = r.Register(analyzer)
 
 	input := AnalysisInput{
 		InitialCash: 10000,
@@ -244,7 +244,7 @@ func TestCalculateWithError(t *testing.T) {
 	r := NewRegistry()
 	expectedErr := errors.New("calculation failed")
 	analyzer := &mockAnalyzer{name: "failing", err: expectedErr}
-	r.Register(analyzer)
+	_ = r.Register(analyzer)
 
 	input := AnalysisInput{}
 	_, err := r.Calculate("failing", input)
@@ -259,9 +259,9 @@ func TestCalculateWithError(t *testing.T) {
 // TestCalculateAll tests calculating all analyzers.
 func TestCalculateAll(t *testing.T) {
 	r := NewRegistry()
-	r.Register(&mockAnalyzer{name: "analyzer1", result: 100.0})
-	r.Register(&mockAnalyzer{name: "analyzer2", result: 200.0})
-	r.Register(&mockAnalyzer{name: "analyzer3", result: "custom"})
+	_ = r.Register(&mockAnalyzer{name: "analyzer1", result: 100.0})
+	_ = r.Register(&mockAnalyzer{name: "analyzer2", result: 200.0})
+	_ = r.Register(&mockAnalyzer{name: "analyzer3", result: "custom"})
 
 	input := AnalysisInput{
 		InitialCash: 10000,
@@ -287,8 +287,8 @@ func TestCalculateAll(t *testing.T) {
 // TestCalculateAllWithErrors tests CalculateAll with failing analyzers.
 func TestCalculateAllWithErrors(t *testing.T) {
 	r := NewRegistry()
-	r.Register(&mockAnalyzer{name: "success", result: 42.0})
-	r.Register(&mockAnalyzer{name: "failure", err: errors.New("fail")})
+	_ = r.Register(&mockAnalyzer{name: "success", result: 42.0})
+	_ = r.Register(&mockAnalyzer{name: "failure", err: errors.New("fail")})
 
 	input := AnalysisInput{}
 	results := r.CalculateAll(input)
@@ -414,7 +414,7 @@ func (w *WinStreakAnalyzer) Calculate(input AnalysisInput) (interface{}, error) 
 // TestRealWorldAnalyzer tests a realistic custom analyzer.
 func TestRealWorldAnalyzer(t *testing.T) {
 	r := NewRegistry()
-	r.Register(&WinStreakAnalyzer{})
+	_ = r.Register(&WinStreakAnalyzer{})
 
 	input := AnalysisInput{
 		TradeHistory: []portfolio.Trade{

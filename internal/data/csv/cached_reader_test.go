@@ -408,9 +408,9 @@ func TestCachedCSVFeed_Stats(t *testing.T) {
 	}
 
 	// Read multiple times
-	feed.ReadAll()
-	feed.ReadAll()
-	feed.ReadAll()
+	_, _ = feed.ReadAll()
+	_, _ = feed.ReadAll()
+	_, _ = feed.ReadAll()
 
 	stats := feed.Stats()
 	if stats.Hits != 2 {

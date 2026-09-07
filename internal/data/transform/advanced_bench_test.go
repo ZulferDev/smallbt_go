@@ -25,12 +25,12 @@ func BenchmarkMultiSymbolTransformedFeed_Next(b *testing.B) {
 				feed, _ := csv.NewCSVDataFeed(csvPath, config)
 				chain := NewTransformChain(NewScaleTransform(2.0, "close"))
 				symbol := fmt.Sprintf("SYM%d", i)
-				msf.AddSymbol(symbol, feed, chain, 100)
+				_ = msf.AddSymbol(symbol, feed, chain, 100)
 			}
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				msf.Next("SYM0")
+				_, _ = msf.Next("SYM0")
 			}
 		})
 	}
@@ -49,12 +49,12 @@ func BenchmarkMultiSymbolTransformedFeed_NextAll(b *testing.B) {
 				feed, _ := csv.NewCSVDataFeed(csvPath, config)
 				chain := NewTransformChain(NewScaleTransform(2.0, "close"))
 				symbol := fmt.Sprintf("SYM%d", i)
-				msf.AddSymbol(symbol, feed, chain, 100)
+				_ = msf.AddSymbol(symbol, feed, chain, 100)
 			}
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				msf.NextAll()
+				_, _ = msf.NextAll()
 			}
 		})
 	}
