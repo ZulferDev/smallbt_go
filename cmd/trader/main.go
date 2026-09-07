@@ -13,6 +13,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/ZulferDev/smallbt_go/internal/analytics"
 	"github.com/ZulferDev/smallbt_go/internal/backtest"
 	"github.com/ZulferDev/smallbt_go/internal/broker"
 	"github.com/ZulferDev/smallbt_go/internal/data/csv"
@@ -58,6 +59,10 @@ func run() error {
 		return runPaper(os.Args[2:])
 	case "report":
 		return runReport(os.Args[2:])
+	case "export-trades":
+		return runExportTrades(os.Args[2:])
+	case "analyze-trades":
+		return runAnalyzeTrades(os.Args[2:])
 	case "-h", "--help", "help":
 		printHelp()
 		return nil
@@ -81,6 +86,8 @@ COMMANDS:
   montecarlo           Run Monte Carlo Simulation
   paper                Run paper trading with simulated real-time data
   report               Generate reports from backtest results
+  export-trades        Export trade history to CSV
+  analyze-trades       Analyze trade statistics and patterns
 
 FLAGS:
   -h, --help    Show this help message
@@ -91,7 +98,9 @@ EXAMPLES:
   trader validate-transforms --strategy strategy.yaml --data sample.csv
   trader backtest --strategy strategy.yaml --data data.csv
   trader paper --strategy strategy.yaml --symbol BTCUSDT --price 50000
-  trader montecarlo --result backtest_result.json --simulations 10000`)
+  trader montecarlo --result backtest_result.json --simulations 10000
+  trader export-trades --result backtest_result.json --output trades.csv
+  trader analyze-trades --result backtest_result.json`)
 }
 
 func runValidate(args []string) error {
@@ -1112,4 +1121,80 @@ func runPaperWithWebSocket(broker *broker.PaperBroker, wsURL, symbol string, dur
 			fmt.Println()
 		}
 	}
+}
+
+func runExportTrades(args []string) error {
+	fs := flag.NewFlagSet("export-trades", flag.ExitOnError)
+	resultPath := fs.String("result", "", "Path to backtest result JSON file")
+	outputPath := fs.String("output", "trades.csv", "Output CSV file path")
+	
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	
+	if *resultPath == "" {
+		return fmt.Errorf("--result is required")
+	}
+	
+	// Load result
+	resultData, err := os.ReadFile(*resultPath)
+	if err != nil {
+		return fmt.Errorf("read result file: %w", err)
+	}
+	
+	var result backtest.BacktestResult
+	if err := json.Unmarshal(resultData, &result); err != nil {
+		return fmt.Errorf("parse result JSON: %w", err)
+	}
+	
+	// Export trades
+	exporter := analytics.NewTradeJournalExporter(result.TradeHistory)
+	if err := exporter.ExportCSV(*outputPath); err != nil {
+		return fmt.Errorf("export CSV: %w", err)
+	}
+	
+	fmt.Printf("✓ Exported %d trades to %s\n", len(result.TradeHistory), *outputPath)
+	return nil
+}
+
+func runAnalyzeTrades(args []string) error {
+	fs := flag.NewFlagSet("analyze-trades", flag.ExitOnError)
+	resultPath := fs.String("result", "", "Path to backtest result JSON file")
+	outputPath := fs.String("output", "", "Optional output file for analysis report")
+	
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	
+	if *resultPath == "" {
+		return fmt.Errorf("--result is required")
+	}
+	
+	// Load result
+	resultData, err := os.ReadFile(*resultPath)
+	if err != nil {
+		return fmt.Errorf("read result file: %w", err)
+	}
+	
+	var result backtest.BacktestResult
+	if err := json.Unmarshal(resultData, &result); err != nil {
+		return fmt.Errorf("parse result JSON: %w", err)
+	}
+	
+	// Analyze trades
+	analysis := analytics.AnalyzeTrades(result.TradeHistory)
+	report := analytics.FormatAnalysisReport(analysis)
+	
+	// Print to console
+	fmt.Println(report)
+	
+	// Save to file if requested
+	if *outputPath != "" {
+		if err := os.WriteFile(*outputPath, []byte(report), 0644); err != nil {
+			return fmt.Errorf("write report: %w", err)
+		}
+		fmt.Printf("\n✓ Analysis report saved to %s\n", *outputPath)
+	}
+	
+	return nil
 }
