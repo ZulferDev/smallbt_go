@@ -24,6 +24,7 @@ import (
 	"github.com/ZulferDev/smallbt_go/internal/montecarlo"
 	"github.com/ZulferDev/smallbt_go/internal/optimization"
 	"github.com/ZulferDev/smallbt_go/internal/portfolio"
+	"github.com/ZulferDev/smallbt_go/internal/report"
 	"github.com/ZulferDev/smallbt_go/internal/strategy/parser"
 	"github.com/ZulferDev/smallbt_go/internal/walkforward"
 )
@@ -1031,7 +1032,77 @@ func runMonteCarlo(args []string) error {
 }
 
 func runReport(args []string) error {
-	fmt.Println("Report generation not yet implemented")
+	fs := flag.NewFlagSet("report", flag.ExitOnError)
+	resultPath := fs.String("result", "", "Path to backtest result JSON file")
+	format := fs.String("format", "html", "Report format: html, markdown, text")
+	output := fs.String("output", "", "Output file path (optional, prints to stdout if omitted)")
+	title := fs.String("title", "Backtest Report", "Report title")
+	theme := fs.String("theme", "light", "HTML theme: light or dark")
+	noCSS := fs.Bool("no-css", false, "Exclude CSS from HTML output")
+
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("parse flags: %w", err)
+	}
+
+	if *resultPath == "" {
+		return fmt.Errorf("--result flag required")
+	}
+
+	// Load backtest result
+	resultBytes, err := os.ReadFile(*resultPath)
+	if err != nil {
+		return fmt.Errorf("read result file: %w", err)
+	}
+
+	var result backtest.BacktestResult
+	if err := json.Unmarshal(resultBytes, &result); err != nil {
+		return fmt.Errorf("unmarshal result: %w", err)
+	}
+
+	// Determine format
+	var reportFormat report.ReportFormat
+	switch strings.ToLower(*format) {
+	case "html":
+		reportFormat = report.FormatHTML
+	case "markdown", "md":
+		reportFormat = report.FormatMarkdown
+	case "text", "txt":
+		reportFormat = report.FormatText
+	default:
+		return fmt.Errorf("unsupported format: %s (use html, markdown, or text)", *format)
+	}
+
+	// Create report config
+	config := report.ReportConfig{
+		Format:              reportFormat,
+		Title:               *title,
+		IncludeSummary:      true,
+		IncludeMetrics:      true,
+		IncludeTradeHistory: true,
+		IncludeEquityCurve:  false,
+		IncludeDrawdown:     false,
+		IncludeMonthly:      false,
+		IncludeCSS:          !*noCSS,
+		Theme:               *theme,
+	}
+
+	// Generate report
+	gen := report.NewGenerator(config)
+	rpt, err := gen.Generate(&result)
+	if err != nil {
+		return fmt.Errorf("generate report: %w", err)
+	}
+
+	// Output report
+	if *output != "" {
+		if err := os.WriteFile(*output, []byte(rpt.Content), 0644); err != nil {
+			return fmt.Errorf("write output file: %w", err)
+		}
+		fmt.Printf("Report generated: %s\n", *output)
+	} else {
+		fmt.Println(rpt.Content)
+	}
+
 	return nil
 }
 
