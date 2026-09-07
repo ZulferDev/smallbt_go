@@ -1174,30 +1174,29 @@ func runPaper(args []string) error {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			elapsed := time.Since(startTime).Seconds()
-			if elapsed >= float64(*duration) {
-				fmt.Println("\nPaper trading session complete")
-				return printPaperSummary(broker)
-			}
+	for range ticker.C {
+		elapsed := time.Since(startTime).Seconds()
+		if elapsed >= float64(*duration) {
+			fmt.Println("\nPaper trading session complete")
+			return printPaperSummary(broker)
+		}
 
-			// Print status
-			ctx := context.Background()
-			positions, _ := broker.GetPositions(ctx)
-			balance, _ := broker.GetBalance(ctx)
+		// Print status
+		ctx := context.Background()
+		positions, _ := broker.GetPositions(ctx)
+		balance, _ := broker.GetBalance(ctx)
 
-			fmt.Printf("[%.0fs] Balance: %.2f | Equity: %.2f | Positions: %d\n",
-				elapsed, balance.Cash, balance.Equity, len(positions))
+		fmt.Printf("[%.0fs] Balance: %.2f | Equity: %.2f | Positions: %d\n",
+			elapsed, balance.Cash, balance.Equity, len(positions))
 
-			for _, pos := range positions {
-				pnl := pos.UnrealizedPnL()
-				fmt.Printf("  %s: %.4f @ %.2f (PnL: %.2f)\n",
-					pos.Symbol, pos.Quantity, pos.EntryPrice, pnl)
-			}
+		for _, pos := range positions {
+			pnl := pos.UnrealizedPnL()
+			fmt.Printf("  %s: %.4f @ %.2f (PnL: %.2f)\n",
+				pos.Symbol, pos.Quantity, pos.EntryPrice, pnl)
 		}
 	}
+
+	return nil
 }
 
 func printPaperSummary(broker *broker.PaperBroker) error {

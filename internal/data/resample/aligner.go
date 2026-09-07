@@ -112,7 +112,6 @@ func (a *DefaultAligner) Align(symbolData map[string][]*market.Candle) (map[stri
 					}
 				case FillStrategyDrop:
 					skip = true
-					break
 				case FillStrategyNone:
 					return nil, fmt.Errorf("missing data at %v for symbol %s (FillStrategyNone)", ts, symbol)
 				}

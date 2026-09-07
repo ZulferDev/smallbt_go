@@ -59,7 +59,7 @@ func (r *OptimizationReport) GenerateReport() string {
 
 	// Top 5 results
 	sb.WriteString("TOP 5 RESULTS\n")
-	sb.WriteString(fmt.Sprintf("%-6s %-30s %s\n", "Rank", "Parameters", fmt.Sprintf("%s", r.ObjectiveMetric)))
+	sb.WriteString(fmt.Sprintf("%-6s %-30s %s\n", "Rank", "Parameters", r.ObjectiveMetric))
 	sb.WriteString(strings.Repeat("-", 60) + "\n")
 
 	for i, result := range r.TopResults {

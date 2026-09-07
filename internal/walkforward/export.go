@@ -78,7 +78,7 @@ func (wfa *WalkForwardAnalysis) ExportWindowResultsToCSV(filepath string) error 
 		}
 
 		delta := testReturn - trainReturn
-		degradation := "Stable"
+		var degradation string
 		if delta < -10 {
 			degradation = "High"
 		} else if delta < -5 {

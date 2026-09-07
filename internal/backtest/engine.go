@@ -283,7 +283,9 @@ func runBacktestLoop(
 
 		// Update evaluator with current candle FIRST
 		// This ensures indicators are calculated before evaluating conditions
-		evaluator.UpdateCandle(*candle)
+		if err := evaluator.UpdateCandle(*candle); err != nil {
+			continue
+		}
 
 		// Process pending orders FIRST to update portfolio state
 		// This ensures that filled orders from previous bar are processed

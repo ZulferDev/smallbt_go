@@ -1,10 +1,12 @@
 package execution
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/ZulferDev/smallbt_go/internal/market"
 	"github.com/ZulferDev/smallbt_go/internal/order"
-	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestSimpleExecutorMarketOrder(t *testing.T) {

@@ -60,7 +60,7 @@ func TestMultiTimeframeIndicator(t *testing.T) {
 	assert.True(t, ema1h > 0, "EMA 1h should have value")
 
 	// Verify 4h indicator exists but may not have value yet (different timeframe)
-	ema4h, err := eval.GetIndicatorValue("ema_4h")
+	ema4h, _ := eval.GetIndicatorValue("ema_4h")
 	// 4h indicator should exist but may need separate data feed
 	t.Logf("EMA 1h: %.2f, EMA 4h: %.2f", ema1h, ema4h)
 }

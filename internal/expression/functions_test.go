@@ -1,8 +1,9 @@
 package expression
 
 import (
-	"github.com/ZulferDev/smallbt_go/internal/indicator"
 	"testing"
+
+	"github.com/ZulferDev/smallbt_go/internal/indicator"
 )
 
 // TestFunctionCrossAbove tests cross_above function.

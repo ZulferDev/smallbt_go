@@ -13,7 +13,6 @@ import (
 
 // YAMLModifier implements StrategyModifier for YAML strategy files.
 type YAMLModifier struct {
-	basePath string
 }
 
 // NewYAMLModifier creates a new YAML strategy modifier.
