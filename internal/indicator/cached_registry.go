@@ -152,13 +152,13 @@ func BuiltinCachedRegistry() *CachedRegistry {
 	reg := NewCachedRegistry()
 
 	// Register stateless versions
-	reg.RegisterStateless("sma", SMAFactory)
-	reg.RegisterStateless("ema", EMAFactory)
-	reg.RegisterStateless("rsi", RSIFactory)
-	reg.RegisterStateless("atr", ATRFactory)
+	_ = reg.RegisterStateless("sma", SMAFactory)
+	_ = reg.RegisterStateless("ema", EMAFactory)
+	_ = reg.RegisterStateless("rsi", RSIFactory)
+	_ = reg.RegisterStateless("atr", ATRFactory)
 
 	// Register cached versions (preferred)
-	reg.RegisterCached("atr", CachedATRFactory)
+	_ = reg.RegisterCached("atr", CachedATRFactory)
 
 	// TODO: Add cached versions for other indicators as they are implemented
 	// reg.RegisterCached("sma", CachedSMAFactory)

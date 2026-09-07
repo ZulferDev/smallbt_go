@@ -51,10 +51,10 @@ func BuiltinRegistry() *Registry {
 	reg := NewRegistry()
 
 	// Register built-in indicators
-	reg.Register("sma", SMAFactory)
-	reg.Register("ema", EMAFactory)
-	reg.Register("rsi", RSIFactory)
-	reg.Register("atr", ATRFactory)
+	_ = reg.Register("sma", SMAFactory)
+	_ = reg.Register("ema", EMAFactory)
+	_ = reg.Register("rsi", RSIFactory)
+	_ = reg.Register("atr", ATRFactory)
 
 	return reg
 }

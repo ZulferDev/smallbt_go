@@ -247,7 +247,7 @@ func (f *WebSocketFeed) readLoop() {
 				for _, c := range drained {
 					f.broadcast(c)
 				}
-				f.buffer.Push(candle)
+				_ = f.buffer.Push(candle)
 			}
 
 			// Broadcast immediately

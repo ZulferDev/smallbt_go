@@ -32,7 +32,7 @@ func main() {
 	defer writer.Flush()
 
 	// Write header
-	writer.Write([]string{"timestamp", "open", "high", "low", "close", "volume"})
+	_ = writer.Write([]string{"timestamp", "open", "high", "low", "close", "volume"})
 
 	// Generate data with trends
 	startTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -95,7 +95,7 @@ func main() {
 		volume := baseVolume * volumeMultiplier
 
 		// Write row
-		writer.Write([]string{
+		_ = writer.Write([]string{
 			timestamp.Format(time.RFC3339),
 			fmt.Sprintf("%.2f", open),
 			fmt.Sprintf("%.2f", high),
