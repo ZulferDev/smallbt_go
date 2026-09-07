@@ -654,7 +654,7 @@ func runBacktestLoop(
 						Quantity: 1.0,
 						Price:    state.takeProfit,
 					}
-					brokerInstance.SubmitOrder(req, candle.Timestamp)
+					_, _ = brokerInstance.SubmitOrder(req, candle.Timestamp)
 				}
 			}
 		}
