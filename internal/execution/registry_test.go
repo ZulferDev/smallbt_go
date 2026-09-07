@@ -99,7 +99,7 @@ func TestRegisterDuplicate(t *testing.T) {
 		return &mockSlippageModel{}, nil
 	}
 
-	r.Register("duplicate", factory)
+	_ = r.Register("duplicate", factory)
 	err := r.Register("duplicate", factory)
 
 	if err == nil {
@@ -115,7 +115,7 @@ func TestUnregister(t *testing.T) {
 		return &mockSlippageModel{}, nil
 	}
 
-	r.Register("custom", factory)
+	_ = r.Register("custom", factory)
 	if !r.Has("custom") {
 		t.Fatal("Model not registered")
 	}
@@ -315,7 +315,7 @@ func TestClear(t *testing.T) {
 	factory := func(params map[string]interface{}) (SlippageModel, error) {
 		return &mockSlippageModel{}, nil
 	}
-	r.Register("custom", factory)
+	_ = r.Register("custom", factory)
 
 	if !r.Has("custom") {
 		t.Fatal("Custom model not registered")

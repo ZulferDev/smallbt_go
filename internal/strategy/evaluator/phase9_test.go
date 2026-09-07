@@ -173,9 +173,9 @@ func TestCompositeIndicators(t *testing.T) {
 
 	// Create registry with mock indicators
 	registry := indicator.NewRegistry()
-	registry.Register("sma", mockIndicatorFactory(100.0))
-	registry.Register("subtract", mockIndicatorFactory(5.0))
-	registry.Register("divide", mockIndicatorFactory(0.0526))
+	_ = registry.Register("sma", mockIndicatorFactory(100.0))
+	_ = registry.Register("subtract", mockIndicatorFactory(5.0))
+	_ = registry.Register("divide", mockIndicatorFactory(0.0526))
 
 	eval := evaluator.NewEvaluator(strategy, registry, market.Symbol("BTCUSDT"), market.Timeframe("4h"))
 
