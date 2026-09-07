@@ -28,11 +28,11 @@ func BenchmarkBufferedParquetReader_Next(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if i%10000 == 0 {
-			reader.Reset()
+			_ = reader.Reset()
 		}
 		_, err := reader.Next()
 		if err != nil {
-			reader.Reset()
+			_ = reader.Reset()
 		}
 	}
 }
@@ -59,7 +59,7 @@ func BenchmarkBufferedParquetReader_NextChunk(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := reader.NextChunk()
 		if err != nil {
-			reader.Reset()
+			_ = reader.Reset()
 		}
 	}
 }
@@ -88,7 +88,7 @@ func BenchmarkBufferedParquetReader_ChunkSizes(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				reader.Reset()
+				_ = reader.Reset()
 				for {
 					_, err := reader.NextChunk()
 					if err != nil {
@@ -235,12 +235,12 @@ func BenchmarkBufferedParquetReader_Reset(b *testing.B) {
 
 	// Read some data
 	for i := 0; i < 5000; i++ {
-		reader.Next()
+		_, _ = reader.Next()
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		reader.Reset()
+		_ = reader.Reset()
 	}
 }
 
@@ -261,7 +261,7 @@ func BenchmarkBufferedParquetReader_Stats(b *testing.B) {
 
 	// Read some data
 	for i := 0; i < 5000; i++ {
-		reader.Next()
+		_, _ = reader.Next()
 	}
 
 	b.ResetTimer()

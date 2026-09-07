@@ -91,7 +91,7 @@ func generateTestCSV(b *testing.B, numCandles int) string {
 	defer f.Close()
 
 	// Write CSV header
-	f.WriteString("timestamp,open,high,low,close,volume\n")
+	_, _ = f.WriteString("timestamp,open,high,low,close,volume\n")
 
 	baseTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	basePrice := 10000.0
@@ -109,7 +109,7 @@ func generateTestCSV(b *testing.B, numCandles int) string {
 		close := price + float64((i*3)%20-10)
 		volume := 1000000.0 + float64(i*1000)
 
-		f.WriteString(fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.2f\n",
+		_, _ = f.WriteString(fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.2f\n",
 			timestamp.Format("2006-01-02 15:04:05"),
 			open, high, low, close, volume))
 	}

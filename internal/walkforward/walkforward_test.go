@@ -148,7 +148,7 @@ func TestGenerateWindows(t *testing.T) {
 func TestWindowBoundaries(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(2000)
+	_ = wfa.GenerateWindows(2000)
 
 	if len(wfa.Windows) != 2 {
 		t.Fatalf("Expected 2 windows, got %d", len(wfa.Windows))
@@ -176,7 +176,7 @@ func TestWindowBoundaries(t *testing.T) {
 func TestAddWindowResult(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(1500)
+	_ = wfa.GenerateWindows(1500)
 
 	// Create mock results
 	trainResult := &backtest.BacktestResult{
@@ -217,7 +217,7 @@ func TestAddWindowResult(t *testing.T) {
 func TestAddWindowResultOutOfBounds(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(1500)
+	_ = wfa.GenerateWindows(1500)
 
 	result := &WFWindowResult{}
 
@@ -230,7 +230,7 @@ func TestAddWindowResultOutOfBounds(t *testing.T) {
 func TestGetWindow(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(1500)
+	_ = wfa.GenerateWindows(1500)
 
 	window := wfa.GetWindow(0)
 	if window == nil {
@@ -255,7 +255,7 @@ func TestWindowCount(t *testing.T) {
 		t.Errorf("WindowCount() before generate: got %d, want 0", wfa.WindowCount())
 	}
 
-	wfa.GenerateWindows(2000)
+	_ = wfa.GenerateWindows(2000)
 	if wfa.WindowCount() != 2 {
 		t.Errorf("WindowCount() after generate: got %d, want 2", wfa.WindowCount())
 	}
@@ -264,7 +264,7 @@ func TestWindowCount(t *testing.T) {
 func TestCompleteWindows(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(1500)
+	_ = wfa.GenerateWindows(1500)
 
 	if wfa.CompleteWindows() != 0 {
 		t.Errorf("CompleteWindows() before adding results: got %d, want 0", wfa.CompleteWindows())
@@ -274,7 +274,7 @@ func TestCompleteWindows(t *testing.T) {
 		TrainResult: &backtest.BacktestResult{},
 		TestResult:  &backtest.BacktestResult{},
 	}
-	wfa.AddWindowResult(0, result)
+	_ = wfa.AddWindowResult(0, result)
 
 	if wfa.CompleteWindows() != 1 {
 		t.Errorf("CompleteWindows() after adding result: got %d, want 1", wfa.CompleteWindows())
@@ -284,7 +284,7 @@ func TestCompleteWindows(t *testing.T) {
 func TestComputeAggregateNoResults(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(1500)
+	_ = wfa.GenerateWindows(1500)
 
 	_, err := wfa.ComputeAggregate()
 	if err != ErrNoResults {
@@ -295,14 +295,14 @@ func TestComputeAggregateNoResults(t *testing.T) {
 func TestComputeAggregateIncomplete(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(2000) // 2 windows
+	_ = wfa.GenerateWindows(2000) // 2 windows
 
 	// Add result for only 1 window
 	result := &WFWindowResult{
 		TrainResult: &backtest.BacktestResult{},
 		TestResult:  &backtest.BacktestResult{},
 	}
-	wfa.AddWindowResult(0, result)
+	_ = wfa.AddWindowResult(0, result)
 
 	_, err := wfa.ComputeAggregate()
 	if err != ErrIncompleteWindows {
@@ -313,7 +313,7 @@ func TestComputeAggregateIncomplete(t *testing.T) {
 func TestComputeAggregateBasic(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(1500)
+	_ = wfa.GenerateWindows(1500)
 
 	// Create mock results with equity points
 	equity1 := []backtest.EquityPoint{
@@ -344,7 +344,7 @@ func TestComputeAggregateBasic(t *testing.T) {
 		TestResult:  testResult,
 	}
 
-	wfa.AddWindowResult(0, result)
+	_ = wfa.AddWindowResult(0, result)
 
 	agg, err := wfa.ComputeAggregate()
 	if err != nil {
@@ -401,7 +401,7 @@ func TestReportEmpty(t *testing.T) {
 func TestMultipleWindows(t *testing.T) {
 	config := WindowConfig{TrainBars: 1000, TestBars: 500, StepBars: 500}
 	wfa, _ := New(config)
-	wfa.GenerateWindows(3000) // 5 windows possible
+	_ = wfa.GenerateWindows(3000) // 5 windows possible
 
 	if wfa.WindowCount() < 2 {
 		t.Fatalf("Expected at least 2 windows, got %d", wfa.WindowCount())
@@ -437,7 +437,7 @@ func TestMultipleWindows(t *testing.T) {
 			TestResult:  testResult,
 		}
 
-		wfa.AddWindowResult(i, result)
+		_ = wfa.AddWindowResult(i, result)
 	}
 
 	if wfa.CompleteWindows() != wfa.WindowCount() {

@@ -321,9 +321,9 @@ func TestCachedParquetReader_Stats(t *testing.T) {
 	defer reader.Close()
 
 	// Read multiple times
-	reader.Read()
-	reader.Read()
-	reader.Read()
+	_, _ = reader.Read()
+	_, _ = reader.Read()
+	_, _ = reader.Read()
 
 	stats := reader.Stats()
 	if stats.Hits != 2 {
