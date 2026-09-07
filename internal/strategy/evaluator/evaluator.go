@@ -464,8 +464,6 @@ func (e *Evaluator) updateCandleStateless(candle market.Candle) error {
 			e.values[name] = 0
 		}
 
-		if e.context.BarIndex == 0 {
-		}
 	}
 
 	return nil
@@ -683,8 +681,6 @@ func (e *Evaluator) EvaluateExpression(fn string, args []interface{}) (float64, 
 			return 0, err
 		}
 		values[i] = val
-		if e.context.BarIndex < 5 && (fn == "divide" || fn == "add" || fn == "multiply" || fn == "subtract") {
-		}
 	}
 
 	switch fn {
@@ -703,8 +699,6 @@ func (e *Evaluator) EvaluateExpression(fn string, args []interface{}) (float64, 
 		}
 		return result, nil
 	case "divide":
-		if e.context.BarIndex < 5 {
-		}
 		if values[1] == 0 {
 			// Return 0 instead of error - indicator not ready yet
 			return 0, nil
