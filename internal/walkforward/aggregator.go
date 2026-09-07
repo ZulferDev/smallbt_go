@@ -3,7 +3,6 @@ package walkforward
 import (
 	"math"
 
-	"github.com/ZulferDev/smallbt_go/internal/analytics"
 )
 
 // ComputeAggregate computes aggregate metrics across all windows.
@@ -21,7 +20,6 @@ func (wfa *WalkForwardAnalysis) ComputeAggregate() (*WFAggregateResult, error) {
 	}
 
 	// Aggregate equity curve and metrics from all test (out-of-sample) windows
-	var allEquity []analytics.EquityPoint
 	var totalTrades int
 	var totalReturn float64
 	var inSampleSharpe []float64
@@ -33,17 +31,6 @@ func (wfa *WalkForwardAnalysis) ComputeAggregate() (*WFAggregateResult, error) {
 			totalTrades += result.TestResult.TotalTrades
 			if result.TestResult.Metrics != nil {
 				totalReturn += result.TestResult.Metrics.TotalReturn
-			}
-
-			// Convert backtest.EquityPoint to analytics.EquityPoint
-			for _, ep := range result.TestResult.EquityCurve {
-				allEquity = append(allEquity, analytics.EquityPoint{
-					Timestamp: ep.Timestamp,
-					Equity:    ep.Equity,
-					Cash:      ep.Cash,
-					Drawdown:  ep.Drawdown,
-					Exposure:  ep.Exposure,
-				})
 			}
 		}
 

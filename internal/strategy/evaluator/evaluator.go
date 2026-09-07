@@ -265,8 +265,6 @@ func (ci *compositeIndicator) Calculate(ctx *indicator.Context) (indicator.Value
 	}
 
 	// Use the composite operation type as function name
-	if ci.eval.context.BarIndex == 0 {
-	}
 
 	// Check if all dependency indicators are valid before calculating
 	for _, arg := range args {
@@ -275,8 +273,6 @@ func (ci *compositeIndicator) Calculate(ctx *indicator.Context) (indicator.Value
 			if _, exists := ci.eval.indicators[argStr]; exists {
 				// Check validity
 				if !ci.eval.validityFlags[argStr] {
-					if ci.eval.context.BarIndex < 25 {
-					}
 					return indicator.Value{Valid: false}, nil
 				}
 			}
@@ -434,8 +430,6 @@ func (e *Evaluator) updateCandleStateless(candle market.Candle) error {
 			}
 		} else {
 			e.values[name] = 0
-			if barIndex < 25 && (name == "volume_avg" || name == "ema_fast" || name == "ema_slow") {
-			}
 		}
 	}
 

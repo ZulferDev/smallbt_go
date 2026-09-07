@@ -147,7 +147,7 @@ func BenchmarkParquetRoundTrip(b *testing.B) {
 func BenchmarkParquetFileSize(b *testing.B) {
 	// This benchmark measures file size (run once)
 	if b.N > 1 {
-		b.N = 1
+		b.SkipNow()
 	}
 
 	sizes := []int{1000, 10000, 100000}
